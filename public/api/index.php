@@ -1,0 +1,142 @@
+<?php
+// api/index.php
+error_reporting(0);
+ini_set('display_errors', 0);
+header("Access-Control-Allow-Origin: *");
+header("Content-Type: application/json; charset=UTF-8");
+header("Access-Control-Allow-Methods: POST, GET, OPTIONS, DELETE, PUT");
+header("Access-Control-Max-Age: 3600");
+header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
+require_once __DIR__ . '/config/db.php';
+require_once __DIR__ . '/auth/jwt.php';
+require_once __DIR__ . '/auth/check_session.php';
+
+$request_method = $_SERVER["REQUEST_METHOD"];
+$uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+
+// Para lidar com "/api/index.php/produtos" corretamente:
+// Pega o nome do recurso após "index.php/" ou "/api/"
+$resource = '';
+if (strpos($uri, 'index.php/') !== false) {
+    $parts = explode('index.php/', $uri);
+    $sub_parts = explode('/', $parts[1]);
+    $resource = $sub_parts[0];
+} else {
+    $parts = explode('/api/', $uri);
+    if (count($parts) > 1) {
+        $sub_parts = explode('/', $parts[1]);
+        $resource = $sub_parts[0];
+    }
+}
+
+// Proteção da API (Exceto health e login se houvesse no index)
+if ($resource !== 'health' && $resource !== 'login' && !isset($_SESSION['user'])) {
+    http_response_code(401);
+    echo json_encode(["message" => "Não autorizado"]);
+    exit();
+}
+
+// Libera trava do arquivo de sessão para permitir conexões concorrentes do mesmo usuário (melhora performance e evita deadlock)
+session_write_close();
+
+switch($resource) {
+    case 'health':
+        echo json_encode(["status" => "ok", "message" => "Akipede Mais API is running"]);
+        break;
+    case 'produtos':
+        require_once __DIR__ . '/controllers/ProdutoController.php';
+        $controller = new ProdutoController((new Database())->getConnection());
+        if ($request_method == 'GET') {
+            $user_id = $_SESSION['user']['id'] ?? null;
+            if ($user_id) {
+                echo json_encode($controller->readByUser($user_id));
+            } else {
+                echo json_encode([]); // Falha de segurança, não tem sessão
+            }
+        } elseif ($request_method == 'POST') {
+            $data = json_decode(file_get_contents("php://input"), true);
+            if ($controller->create($data)) {
+                echo json_encode(["message" => "Produto criado"]);
+            } else {
+                http_response_code(500); echo json_encode(["message" => "Erro ao criar produto"]);
+            }
+        }
+        break;
+    case 'orcamentos':
+        require_once __DIR__ . '/controllers/OrcamentoController.php';
+        $controller = new OrcamentoController((new Database())->getConnection());
+        if ($request_method == 'GET') {
+            echo json_encode($controller->read());
+        } elseif ($request_method == 'POST') {
+            $data = json_decode(file_get_contents("php://input"), true);
+            $id = $controller->create($data);
+            if ($id) {
+                http_response_code(201); echo json_encode(["message" => "Orçamento criado", "id" => $id]);
+            } else {
+                http_response_code(500); echo json_encode(["message" => "Erro ao criar orçamento"]);
+            }
+        }
+        break;
+    case 'pedidos':
+        require_once __DIR__ . '/controllers/PedidoController.php';
+        $controller = new PedidoController((new Database())->getConnection());
+        if ($request_method == 'GET') {
+            echo json_encode($controller->read());
+        }
+        break;
+    case 'clientes':
+        require_once __DIR__ . '/controllers/ClienteController.php';
+        $controller = new ClienteController((new Database())->getConnection());
+        if ($request_method == 'GET') {
+            echo json_encode($controller->read());
+        } elseif ($request_method == 'POST') {
+            $data = json_decode(file_get_contents("php://input"), true);
+            if ($controller->create($data)) {
+                echo json_encode(["message" => "Cliente criado"]);
+            } else {
+                http_response_code(500); echo json_encode(["message" => "Erro ao criar cliente"]);
+            }
+        }
+        break;
+    case 'users':
+        require_once __DIR__ . '/controllers/UserController.php';
+        $controller = new UserController((new Database())->getConnection());
+        if ($request_method == 'GET') {
+            echo json_encode($controller->read());
+        } elseif ($request_method == 'POST') {
+            $data = json_decode(file_get_contents("php://input"), true);
+            if ($controller->create($data)) {
+                echo json_encode(["message" => "Usuário criado"]);
+            } else {
+                http_response_code(500); echo json_encode(["message" => "Erro ao criar usuário"]);
+            }
+        }
+        break;
+    case 'categorias':
+        // Simulação básica para não quebrar o frontend
+        echo json_encode([
+            ["id_categoria" => 1, "nome" => "Sushi"],
+            ["id_categoria" => 2, "nome" => "Entrada"],
+            ["id_categoria" => 3, "nome" => "Doces"]
+        ]);
+        break;
+    case 'loja':
+        require_once __DIR__ . '/controllers/LojaController.php';
+        $controller = new LojaController((new Database())->getConnection());
+        $id = $_GET['id'] ?? null;
+        if ($id) {
+            echo json_encode($controller->getById($id));
+        }
+        break;
+    default:
+        http_response_code(404);
+        echo json_encode(["message" => "Recurso não encontrado"]);
+        break;
+}
+?>
