@@ -9,7 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $type = $_POST['type'] ?? 'produtos'; // 'produtos' ou 'usuarios'
-$targetDir = "../../public/storage-akipede/" . $type . "/";
+$targetDir = "../../storage-akipede/" . $type . "/";
 
 if (!file_exists($targetDir)) {
     mkdir($targetDir, 0777, true);

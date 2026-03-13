@@ -29,27 +29,27 @@
                     <template x-for="p in filteredProducts()" :key="p.id_produto">
                         <tr class="product-row">
                             <td style="padding-left: 24px; display: flex; align-items: center;">
-                                <img :src="p.foto || 'https://via.placeholder.com/48'" alt="Prod" style="width: 48px; height: 48px; border-radius: 8px; margin-right: 12px; object-fit: cover;">
+                                <img :src="p.foto || 'https://via.placeholder.com/48'" alt="Prod" style="width: 48px; height: 48px; border-radius: 8px; margin-right: 12px; object-fit: cover;" loading="lazy">
                                 <span style="font-weight: 600;" x-text="p.nome"></span>
                             </td>
                             <td x-text="p.categoria_nome || '-'"></td>
-                            <td style="font-weight: 700; color: var(--alternate);" x-text="'R$ ' + p.valor_venda"></td>
+                            <td style="font-weight: 700; color: var(--alternate);" x-text="formatMoney(p.valor_venda)"></td>
                             <td>
                                 <button class="btn" style="background: rgba(4, 219, 126, 0.1); color: var(--primary); padding: 8px; border-radius: 8px;" @click="openAgendamento(p)">
-                                    <i class="fa-regular fa-calendar-check"></i>
+                                    <i class="fa-regular fa-calendar-check" style="font-size: 1.3rem;"></i>
                                 </button>
                             </td>
                             <td>
-                                <div class="switch" :class="{ 'active': p.ativo }" @click="p.ativo = !p.ativo">
+                                <div class="switch" :class="{ 'active': p.ativo }" @click="toggleProductStatus(p)">
                                     <div class="handle"></div>
                                 </div>
                             </td>
                             <td style="text-align: right; padding-right: 24px;">
                                 <button class="btn" style="background: transparent; color: var(--secondary-text); padding: 8px;" @click="editProduct(p)">
-                                    <i class="fa-solid fa-pen-to-square"></i>
+                                    <i class="fa-solid fa-pen-to-square" style="font-size: 1.3rem;"></i>
                                 </button>
                                 <button class="btn" style="background: transparent; color: var(--error); padding: 8px;" @click="deleteProduct(p)">
-                                    <i class="fa-solid fa-trash-can"></i>
+                                    <i class="fa-solid fa-trash-can" style="font-size: 1.3rem;"></i>
                                 </button>
                             </td>
                         </tr>

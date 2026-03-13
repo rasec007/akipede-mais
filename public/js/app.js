@@ -3,11 +3,7 @@ function app() {
     return {
         user: {},
         products: [],
-        topProducts: [
-            { id: 1, nome: 'Temaki', categoria_nome: 'Entrada', total_pedidos: 2, total_vendidos: 8, valor_total: '40,00', foto: 'https://img.freepik.com/fotos-premium/temaki-sushi-em-forma-de-cone-recheado-com-salmao-e-arroz_158001-2481.jpg' },
-            { id: 2, nome: 'Niguiri', categoria_nome: 'Nova', total_pedidos: 1, total_vendidos: 6, valor_total: '180,00', foto: 'https://img.itdg.com.br/tdg/images/recipes/000/011/327/324102/324102_original.jpg' },
-            { id: 3, nome: 'Hot', categoria_nome: 'Entrada', total_pedidos: 1, total_vendidos: 3, valor_total: '38,97', foto: 'https://p2.trrsf.com/image/fget/cf/1200/675/middle/images.terra.com/2023/04/18/163820986-istock-1205168449.jpg' }
-        ],
+        topProducts: [],
         orcamentos: [],
         orders: [],
         clientes: [],
@@ -18,17 +14,19 @@ function app() {
         stats: { 
             produtos: 0, 
             orcamentos: 3, 
-            pedidos: 2, 
-            parceiros: 1, 
-            clientes: 5,
-            valor_vendas: '20.165,00' 
+            parceiros: 0,
+            clientes: 0,
+            pedidos: 0,
+            valor_vendas: '0,00'
         },
-        connected: false,
+        toasts: [],
         lastNotification: '',
+        productToDelete: {},
         modal: null,
         loadingUpload: false,
         _pollingInterval: null,
-        formProduct: { nome: '', valor_venda: '', valor_custo: '', id_categoria: '', ativo: true, descricao: '', foto: '' },
+        formProduct: { nome: '', valor_venda: '', valor_promocional: '', cod_produto: '', valor_custo: '', id_categoria: '', ativo: true, descricao: '', foto: '' },
+        formCategory: { nome: '' },
         formAgendamento: { ativo: false, tempo: 0, pId: null },
         formCliente: { nome: '', email: '', perfil: 'Usuário', foto: '' },
         categorias: [],
@@ -36,7 +34,6 @@ function app() {
         init() {
             console.log('Akipede Mais Premium (Fidelity Pass) inicializado');
             this.loadUserData();
-            this.loadInitialData();
             this.setupRealtime();
         },
 
@@ -48,6 +45,7 @@ function app() {
                 .then(data => {
                     if (data.logged) {
                         this.user = data.user;
+                        this.loadInitialData(); // Carrega dados após saber quem é o usuário
                     } else {
                         window.location.href = 'login.php';
                     }
@@ -57,14 +55,27 @@ function app() {
         getPageTitle() {
             const titles = {
                 'home': 'Dashboard',
-                'produtos': 'Produtos',
-                'orcamentos': 'Orçamento',
-                'usuarios': 'Usuário',
-                'clientes': 'Clientes',
+                'produtos': 'Gestão de Produtos',
+                'usuarios': 'Gestão de Clientes',
+                'orcamentos': 'Gestão de Orçamentos',
                 'loja': 'Minha Loja',
-                'perfil': 'Perfil'
+                'perfil': 'Meu Perfil'
             };
             return titles[this.currentTab] || 'Akipede Mais';
+        },
+
+        formatMoney(value) {
+            if (value === null || value === undefined) return 'R$ 0,00';
+            const number = typeof value === 'string' ? parseFloat(value) : value;
+            return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(number);
+        },
+
+        showToast(message, type = 'success') {
+            const id = Date.now();
+            this.toasts.push({ id, message, type });
+            setTimeout(() => {
+                this.toasts = this.toasts.filter(t => t.id !== id);
+            }, 4000);
         },
 
         loadInitialData() {
@@ -74,6 +85,19 @@ function app() {
                 .then(data => {
                     this.products = data;
                     this.stats.produtos = data.length;
+                    
+                    // Dashboard: Popular Top 10 com produtos reais
+                    // Como não temos tabela de vendas consolidada ainda, mostramos os últimos cadastrados
+                    this.topProducts = [...data]
+                        .sort((a, b) => b.dt_criado ? b.dt_criado.localeCompare(a.dt_criado) : 0)
+                        .slice(0, 10)
+                        .map(p => ({
+                            ...p,
+                            id: p.id_produto,
+                            total_pedidos: Math.floor(Math.random() * 5), // Dummy para visual
+                            total_vendidos: Math.floor(Math.random() * 20), // Dummy para visual
+                            valor_total: p.valor_venda // Dummy para visual
+                        }));
                 });
 
             // Carregar Orçamentos
@@ -91,8 +115,9 @@ function app() {
                     this.stats.clientes = data.length;
                 });
 
-            // Carregar Categorias
-            fetch('api/index.php/categorias')
+            // Carregar Categorias da loja logada
+            const catUrl = 'api/index.php/categorias' + (this.user.loja_id ? '?loja_id=' + this.user.loja_id : '');
+            fetch(catUrl)
                 .then(res => res.json())
                 .then(data => {
                     this.categorias = data;
@@ -132,13 +157,27 @@ function app() {
         openModal(name) {
             this.modal = name;
             if (name === 'novo-produto') {
-                this.formProduct = { nome: '', valor_venda: '', valor_custo: '', id_categoria: '', ativo: true, descricao: '' };
+                this.formProduct = { nome: '', valor_venda: '', valor_promocional: '', cod_produto: '', valor_custo: '', id_categoria: '', ativo: true, descricao: '', foto: '' };
+            } else if (name === 'novo-categoria') {
+                this.formCategory = { nome: '' };
             } else if (name === 'novo-cliente') {
                 this.formCliente = { nome: '', email: '', perfil: 'Usuário', foto: '' };
             }
         },
 
-        editProduct(p) { this.formProduct = { ...p }; this.modal = 'editar-produto'; },
+        editProduct(p) { 
+            const formatted = { ...p };
+            // Formatar números para string PT-BR para que o input mostre com vírgula
+            if (p.valor_venda !== null) formatted.valor_venda = parseFloat(p.valor_venda).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+            if (p.valor_promocional !== null) formatted.valor_promocional = parseFloat(p.valor_promocional).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+            if (p.valor_custo !== null) formatted.valor_custo = parseFloat(p.valor_custo).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+            
+            // Garantir que a categoria esteja mapeada para o select
+            formatted.id_categoria = p.categoria;
+
+            this.formProduct = formatted; 
+            this.modal = 'editar-produto'; 
+        },
         editCliente(c) { this.formCliente = { ...c }; this.modal = 'editar-cliente'; },
 
         openAgendamento(p) {
@@ -162,31 +201,91 @@ function app() {
                     body: JSON.stringify(p)
                 })
                 .then(res => res.json())
-                .then(data => console.log('Agendamento Atualizado', data))
-                .catch(err => alert('Erro ao atualizar agendamento no servidor'));
+                .then(data => {
+                    this.showToast(`Agendamento de "${p.nome}" atualizado!`);
+                })
+                .catch(err => this.showToast(`Erro ao atualizar agendamento de "${p.nome}"`, 'error'));
             }
             this.modal = null;
+        },
+
+        toggleProductStatus(p) {
+            p.ativo = !p.ativo; // Inverte localmente
+            
+            fetch('api/index.php/produtos?id=' + p.id_produto, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(p)
+            })
+            .then(res => res.json())
+            .then(data => {
+                const acao = p.ativo ? 'ativado' : 'desativado';
+                this.showToast(`Produto "${p.nome}" ${acao} com sucesso!`);
+            })
+            .catch(err => {
+                p.ativo = !p.ativo; // Reverte em caso de erro
+                this.showToast('Erro ao atualizar status', 'error');
+            });
         },
 
         saveProduct() {
             const method = this.modal === 'editar-produto' ? 'PUT' : 'POST';
             const endpoint = 'api/index.php/produtos' + (method === 'PUT' ? '?id=' + this.formProduct.id_produto : '');
             
-            // Garantir que a loja esteja setada (exemplo fixo por enquanto)
-            if (!this.formProduct.loja) this.formProduct.loja = '35f29d20-0097-4d7a-b286-9a25b3952f9c';
+            // Mapear campos e limpar dados para o banco
+            const payload = { ...this.formProduct };
+            payload.categoria = this.formProduct.id_categoria || null;
+            payload.loja = this.user.loja_id || this.user.loja;
+
+            // Limpar valores monetários (remover R$, pontos e trocar vírgula por ponto)
+            const cleanPrice = (val) => {
+                if (!val) return null;
+                if (typeof val === 'number') return val;
+                return parseFloat(val.toString().replace(/[R$\.\s]/g, '').replace(',', '.'));
+            };
+
+            payload.valor_venda = cleanPrice(payload.valor_venda) || 0;
+            payload.valor_promocional = cleanPrice(payload.valor_promocional);
+            payload.valor_custo = cleanPrice(payload.valor_custo);
 
             fetch(endpoint, {
                 method: method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(this.formProduct)
+                body: JSON.stringify(payload)
             })
             .then(res => res.json())
             .then(data => {
-                console.log('Produto salvo:', data);
-                this.modal = null;
-                this.loadInitialData(); // Recarregar lista
+                if (data.error) {
+                    this.showToast('Erro ao salvar produto: ' + data.error, 'error');
+                } else {
+                    const msg = method === 'POST' ? `Produto "${payload.nome}" cadastrado com sucesso!` : `Produto "${payload.nome}" atualizado com sucesso!`;
+                    this.showToast(msg);
+                    this.modal = null;
+                    this.loadInitialData();
+                }
             })
-            .catch(err => alert('Erro ao salvar produto'));
+            .catch(err => this.showToast('Erro na conexão com o servidor', 'error'));
+        },
+
+        saveCategory() {
+            if (!this.formCategory.nome) return alert('Nome da categoria é obrigatório');
+            
+            const payload = {
+                nome: this.formCategory.nome,
+                loja: this.user.loja_id || this.user.loja || '35f29d20-0097-4d7a-b286-9a25b3952f9c'
+            };
+
+            fetch('api/index.php/categorias', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(data => {
+                this.showToast(`Categoria "${payload.nome}" cadastrada com sucesso!`);
+                this.modal = 'novo-produto'; // Volta para o modal de produto
+                this.loadInitialData(); // Recarrega categorias
+            })
+            .catch(err => this.showToast('Erro ao salvar categoria', 'error'));
         },
 
         saveCliente() {
@@ -200,38 +299,131 @@ function app() {
             })
             .then(res => res.json())
             .then(data => {
-                console.log('Cliente salvo:', data);
+                const msg = method === 'POST' ? `Cliente "${this.formCliente.nome}" cadastrado com sucesso!` : `Cliente "${this.formCliente.nome}" atualizado com sucesso!`;
+                this.showToast(msg);
                 this.modal = null;
                 this.loadInitialData();
             })
-            .catch(err => alert('Erro ao salvar cliente'));
+            .catch(err => this.showToast('Erro ao salvar cliente', 'error'));
         },
 
-        uploadFile(event, type, formTarget) {
+        deleteProduct(p) {
+            this.productToDelete = { ...p };
+            this.modal = 'excluir-produto';
+        },
+
+        confirmDeleteProduct() {
+            const p = this.productToDelete;
+            fetch('api/index.php/produtos?id=' + p.id_produto, { method: 'DELETE' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.type === 'deactivated') {
+                        this.showToast(`Produto "${p.nome}" vinculado a orçamentos. Foi desativado em vez de excluído.`, 'warning');
+                    } else {
+                        this.showToast(`Produto "${p.nome}" excluído definitivamente!`);
+                    }
+                    this.modal = null;
+                    this.loadInitialData();
+                })
+                .catch(err => {
+                    console.error(err);
+                    this.showToast('Erro ao excluir produto', 'error');
+                });
+        },
+
+        deleteCliente(c) {
+            if (!confirm(`Deseja realmente excluir o usuário/cliente "${c.nome}"?`)) return;
+            fetch('api/index.php/clientes?id=' + c.id_cliente, { method: 'DELETE' })
+                .then(res => res.json())
+                .then(data => {
+                    this.showToast(`Cliente "${c.nome}" excluído com sucesso!`);
+                    this.loadInitialData();
+                })
+                .catch(err => this.showToast(`Erro ao excluir cliente "${c.nome}"`, 'error'));
+        },
+
+        deleteOrcamento(o) {
+            if (!confirm(`Deseja realmente excluir o orçamento #${o.numero_sequencial}?`)) return;
+            // Endpoint fictício pois orçamentos são sensíveis, mas seguindo o padrão
+            fetch('api/index.php/orcamentos?id=' + o.id_orcamento, { method: 'DELETE' })
+                .then(res => res.json())
+                .then(data => {
+                    this.showToast(`Orçamento #${o.numero_sequencial} excluído com sucesso!`);
+                    this.loadInitialData();
+                })
+                .catch(err => this.showToast(`Erro ao excluir orçamento #${o.numero_sequencial}`, 'error'));
+        },
+
+        async uploadFile(event, type, formTarget) {
             const file = event.target.files[0];
             if (!file) return;
 
             this.loadingUpload = true;
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('type', type);
+            
+            try {
+                // Otimizar imagem: 500px é a medida ideal para web (performance vs qualidade)
+                const optimizedFile = await this.resizeImage(file, 500, 500, 0.7);
+                
+                const formData = new FormData();
+                formData.append('file', optimizedFile, file.name.replace(/\.[^/.]+$/, "") + ".jpg");
+                formData.append('type', type);
 
-            fetch('api/utils/upload.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(res => res.json())
-            .then(data => {
+                const res = await fetch('api/utils/upload.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+
                 if (data.success) {
                     this[formTarget].foto = data.path;
-                    console.log('Upload concluído:', data.path);
+                    this.showToast('Imagem enviada com sucesso!');
                 } else {
-                    alert('Erro no upload: ' + (data.error || 'Erro desconhecido'));
+                    this.showToast('Erro no upload: ' + (data.error || 'Erro desconhecido'), 'error');
                 }
-            })
-            .catch(err => alert('Erro na conexão com o servidor'))
-            .finally(() => {
+            } catch (err) {
+                console.error('Erro no processamento da imagem:', err);
+                this.showToast('Erro ao processar imagem para upload', 'error');
+            } finally {
                 this.loadingUpload = false;
+            }
+        },
+
+        resizeImage(file, maxWidth, maxHeight, quality) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > height) {
+                            if (width > maxWidth) {
+                                height *= maxWidth / width;
+                                width = maxWidth;
+                            }
+                        } else {
+                            if (height > maxHeight) {
+                                width *= maxHeight / height;
+                                height = maxHeight;
+                            }
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        canvas.toBlob((blob) => {
+                            resolve(blob);
+                        }, 'image/jpeg', quality);
+                    };
+                    img.onerror = reject;
+                    img.src = e.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
             });
         },
 

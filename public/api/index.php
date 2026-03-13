@@ -61,10 +61,40 @@ switch($resource) {
             }
         } elseif ($request_method == 'POST') {
             $data = json_decode(file_get_contents("php://input"), true);
-            if ($controller->create($data)) {
-                echo json_encode(["message" => "Produto criado"]);
+            if (isset($_SESSION['user']['loja_id'])) {
+                $data['loja'] = $_SESSION['user']['loja_id'];
+            }
+            $result = $controller->create($data);
+            if ($result) {
+                echo json_encode(["message" => "Produto criado", "id" => $result]);
             } else {
-                http_response_code(500); echo json_encode(["message" => "Erro ao criar produto"]);
+                http_response_code(500); 
+                echo json_encode(["message" => "Erro ao criar produto", "error" => $controller->getLastError()]);
+            }
+        } elseif ($request_method == 'PUT') {
+            $id = $_GET['id'] ?? null;
+            $data = json_decode(file_get_contents("php://input"), true);
+            if (isset($_SESSION['user']['loja_id'])) {
+                $data['loja'] = $_SESSION['user']['loja_id'];
+            }
+            if ($id && $controller->update($id, $data)) {
+                echo json_encode(["message" => "Produto atualizado"]);
+            } else {
+                http_response_code(500); 
+                echo json_encode(["message" => "Erro ao atualizar produto", "error" => $controller->getLastError()]);
+            }
+        } elseif ($request_method == 'DELETE') {
+            $id = $_GET['id'] ?? null;
+            if ($id) {
+                $result = $controller->delete($id);
+                if ($result === 'deactivated') {
+                    echo json_encode(["message" => "Produto vinculado a orçamentos. Foi desativado em vez de excluído.", "type" => "deactivated"]);
+                } elseif ($result) {
+                    echo json_encode(["message" => "Produto excluído com sucesso", "type" => "deleted"]);
+                } else {
+                    http_response_code(500);
+                    echo json_encode(["message" => "Erro ao excluir produto", "error" => $controller->getLastError()]);
+                }
             }
         }
         break;
@@ -119,12 +149,26 @@ switch($resource) {
         }
         break;
     case 'categorias':
-        // Simulação básica para não quebrar o frontend
-        echo json_encode([
-            ["id_categoria" => 1, "nome" => "Sushi"],
-            ["id_categoria" => 2, "nome" => "Entrada"],
-            ["id_categoria" => 3, "nome" => "Doces"]
-        ]);
+        require_once __DIR__ . '/controllers/CategoriaController.php';
+        $controller = new CategoriaController((new Database())->getConnection());
+        if ($request_method == 'GET') {
+            $loja_id = $_GET['loja_id'] ?? ($_SESSION['user']['loja_id'] ?? null);
+            echo json_encode($controller->read($loja_id));
+        } elseif ($request_method == 'POST') {
+            $data = json_decode(file_get_contents("php://input"), true);
+            // Reforçar o loja_id vindo da sessão para segurança
+            if (isset($_SESSION['user']['loja_id'])) {
+                $data['loja'] = $_SESSION['user']['loja_id'];
+            }
+            $id = $controller->create($data);
+            if ($id) {
+                http_response_code(201);
+                echo json_encode(["message" => "Categoria criada", "id" => $id]);
+            } else {
+                http_response_code(500);
+                echo json_encode(["message" => "Erro ao criar categoria"]);
+            }
+        }
         break;
     case 'loja':
         require_once __DIR__ . '/controllers/LojaController.php';

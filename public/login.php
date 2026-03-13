@@ -22,12 +22,12 @@ session_start();
     </div>
 
     <div class="auth-bg">
-        <div class="auth-card" style="padding-top: 24px;">
-            <div class="logo-container" style="margin-bottom: 24px; padding: 0;">
-                <img src="img/logo.png" alt="Logo" style="height: 250px; object-fit: contain; margin-bottom: 0;">
+        <div class="auth-card" style="padding-top: 4px;">
+            <div class="logo-container" style="margin-bottom: 4px; padding: 0;">
+                <img src="img/logo.png" alt="Logo" style="height: 300px; object-fit: contain; margin-bottom: 0;">
             </div>
-
-            <h2 class="font-outfit" style="margin-bottom: 8px; font-size: 2rem; font-weight: 500;">Logista</h2>
+        
+            <h2 class="font-outfit" style="margin-bottom: 8px; font-size: 2rem; font-weight: 500;">Logar</h2> 
             <p style="color: var(--secondary-text); margin-bottom: 32px; font-size: 0.95rem;">Use o formulário abaixo para acessar sua conta.</p>
 
             <form @submit.prevent="fazerLogin($data)" x-data="{ email: '', senha: '', showSenha: false, loading: false }">

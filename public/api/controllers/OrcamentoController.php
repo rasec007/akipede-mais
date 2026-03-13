@@ -33,8 +33,12 @@ class OrcamentoController {
         $stmt = $this->db->prepare($query);
         
         // No PostgreSQL, o INSERT disparará o pg_notify via TRIGGER que criamos no schema.sql
+        $query .= " RETURNING id_orcamento";
+        $stmt = $this->db->prepare($query);
+
         if ($stmt->execute($data)) {
-            return $this->db->lastInsertId();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $result['id_orcamento'];
         }
         return false;
     }

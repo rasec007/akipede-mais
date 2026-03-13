@@ -43,6 +43,15 @@ try {
         
         if (password_verify($senha, $senhaBanco) || $senha === $senhaBanco || ($senhaBanco === '' && $senha === '123456')) {
             unset($user['senha']); // Não guardar a senha na sessão
+            
+            // Buscar loja associada para filtrar categorias/produtos depois
+            require_once __DIR__ . '/../controllers/LojaController.php';
+            $lojaCtrl = new LojaController($db);
+            $loja = $lojaCtrl->getByUser($user['id']);
+            if ($loja) {
+                $user['loja_id'] = $loja['id_loja'];
+            }
+            
             $_SESSION['user'] = $user;
             echo json_encode(['success' => true, 'user' => $user]);
         } else {

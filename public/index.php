@@ -24,7 +24,7 @@ $loggedUser = getLoggedUser();
         </div>
 
         <div class="user-profile-summary" style="border-radius: 8px;">
-            <img :src="user.foto || 'https://via.placeholder.com/44'" alt="User" style="width: 44px; height: 44px; border-radius: 8px; margin-right: 12px; object-fit: cover;">
+            <img :src="user.foto || 'https://via.placeholder.com/44'" alt="User" style="width: 44px; height: 44px; border-radius: 8px; margin-right: 12px; object-fit: cover;" loading="lazy">
             <div style="overflow: hidden;">
                 <p style="font-weight: 700; font-size: 0.95rem; color: var(--primary-text); white-space: nowrap; text-overflow: ellipsis;" x-text="user.nome || 'Carregando...'"></p>
                 <p style="font-size: 0.8rem; color: var(--secondary-text);" x-text="user.email || '...'"></p>
@@ -81,7 +81,7 @@ $loggedUser = getLoggedUser();
                 <div class="card welcome-card">
                     <p style="font-size: 0.95rem; font-weight: 600; color: var(--primary-text); margin-bottom: 4px;">Olá, <span x-text="user.nome"></span></p>
                     <p style="font-size: 0.85rem; color: var(--secondary-text); margin-bottom: 12px;">Total de vendas concluídas</p>
-                    <p class="price" x-text="'R$ ' + stats.valor_vendas">R$ 20.165,00</p>
+                    <p class="price" x-text="formatMoney(stats.valor_vendas)">R$ 0,00</p>
                 </div>
                 
                 <!-- Partners Stat -->
@@ -139,13 +139,13 @@ $loggedUser = getLoggedUser();
                             <template x-for="prod in topProducts" :key="prod.id">
                                 <tr class="product-row">
                                     <td style="padding-left: 24px; display: flex; align-items: center;">
-                                        <img :src="prod.foto || 'https://via.placeholder.com/45'" alt="Prod" style="width: 48px; height: 48px; border-radius: 8px; margin-right: 12px; object-fit: cover;">
+                                        <img :src="prod.foto || 'https://via.placeholder.com/45'" alt="Prod" style="width: 48px; height: 48px; border-radius: 8px; margin-right: 12px; object-fit: cover;" loading="lazy">
                                         <span style="font-weight: 600;" x-text="prod.nome"></span>
                                     </td>
                                     <td x-text="prod.categoria_nome || 'Sem Categoria'"></td>
                                     <td x-text="prod.total_pedidos">2</td>
                                     <td x-text="prod.total_vendidos">8</td>
-                                    <td style="text-align: right; padding-right: 24px; font-weight: 700; color: var(--alternate);" x-text="'R$ ' + prod.valor_total"></td>
+                                    <td style="text-align: right; padding-right: 24px; font-weight: 700; color: var(--alternate);" x-text="formatMoney(prod.valor_total)"></td>
                                 </tr>
                             </template>
                         </tbody>
@@ -166,6 +166,16 @@ $loggedUser = getLoggedUser();
         <!-- Popups / Modais -->
         <?php include 'views/modais.php'; ?>
     </main>
+
+    <!-- Toast Notifications Container -->
+    <div class="toast-container">
+        <template x-for="toast in toasts" :key="toast.id">
+            <div class="toast show shadow-lg" :class="'toast-' + toast.type">
+                <i :class="toast.type === 'success' ? 'fa-solid fa-circle-check text-success' : (toast.type === 'error' ? 'fa-solid fa-circle-xmark text-error' : 'fa-solid fa-circle-exclamation text-warning')"></i>
+                <span x-text="toast.message"></span>
+            </div>
+        </template>
+    </div>
 
     <script src="js/app.js"></script>
 </body>

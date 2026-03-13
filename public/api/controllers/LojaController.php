@@ -15,6 +15,12 @@ class LojaController {
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
+    public function getByUser($user_id) {
+        $stmt = $this->db->prepare("SELECT * FROM loja WHERE users = ? LIMIT 1");
+        $stmt->execute([$user_id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
     public function getByUrl($url) {
         $stmt = $this->db->prepare("SELECT * FROM loja WHERE url = ? AND status = TRUE");
         $stmt->execute([$url]);

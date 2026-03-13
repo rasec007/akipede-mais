@@ -103,7 +103,7 @@ h3,
 
 .logo-container span {
     font-family: 'Outfit', sans-serif;
-    font-weight: 700;
+    font-weight: 500;
     font-size: 1.25rem;
     color: var(--primary);
 }
@@ -251,7 +251,8 @@ td {
 }
 
 .form-control::placeholder {
-    color: transparent; /* Esconde o placeholder para usar o label como placeholder */
+    color: transparent;
+    /* Esconde o placeholder para usar o label como placeholder */
 }
 
 .form-label {
@@ -266,8 +267,8 @@ td {
 }
 
 /* Efeito de flutuar ao focar ou ao ter conteúdo */
-.form-control:focus ~ .form-label,
-.form-control:not(:placeholder-shown) ~ .form-label {
+.form-control:focus~.form-label,
+.form-control:not(:placeholder-shown)~.form-label {
     top: -10px;
     left: 12px;
     font-size: 0.75rem;
@@ -372,10 +373,51 @@ td {
 .switch.active .handle {
     left: 28px;
 }
+
 /* Toast Notifications */
-.toast-container { position: fixed !important; top: 24px !important; right: 24px !important; z-index: 99999 !important; display: flex !important; flex-direction: column !important; gap: 12px !important; pointer-events: none; }
-.toast { background: white !important; padding: 16px 24px !important; border-radius: 8px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important; display: flex !important; align-items: center !important; gap: 12px !important; color: #101213 !important; font-weight: 600 !important; font-size: 0.95rem !important; min-width: 300px !important; border-left: 6px solid #37c6da !important; transform: translateX(150%) !important; transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) !important; visibility: hidden !important; pointer-events: auto; }
-.toast.show { transform: translateX(0) !important; visibility: visible !important; }
-.toast-error { border-left-color: #e21c3d !important; }
-.toast-success { border-left-color: #04a24c !important; }
-.toast-warning { border-left-color: #fcdc0c !important; }
+.toast-container {
+    position: fixed !important;
+    top: 24px !important;
+    right: 24px !important;
+    z-index: 99999 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    pointer-events: none;
+}
+
+.toast {
+    background: white !important;
+    padding: 16px 24px !important;
+    border-radius: 8px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    color: #101213 !important;
+    font-weight: 600 !important;
+    font-size: 0.95rem !important;
+    min-width: 300px !important;
+    border-left: 6px solid #37c6da !important;
+    transform: translateX(150%) !important;
+    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) !important;
+    visibility: hidden !important;
+    pointer-events: auto;
+}
+
+.toast.show {
+    transform: translateX(0) !important;
+    visibility: visible !important;
+}
+
+.toast-error {
+    border-left-color: #e21c3d !important;
+}
+
+.toast-success {
+    border-left-color: #04a24c !important;
+}
+
+.toast-warning {
+    border-left-color: #fcdc0c !important;
+}

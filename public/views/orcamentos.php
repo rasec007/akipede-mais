@@ -41,13 +41,13 @@
                                     'color': o.status === 'Aprovado' ? 'var(--success)' : (o.status === 'Cancelado' ? 'var(--error)' : '#a18d00')
                                 }" style="padding: 6px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 700;" x-text="o.status"></span>
                             </td>
-                            <td style="text-align: right; font-weight: 800; color: var(--alternate);" x-text="'R$ ' + o.valor_total"></td>
+                            <td style="text-align: right; font-weight: 800; color: var(--alternate);" x-text="formatMoney(o.valor_total)"></td>
                             <td style="text-align: right; padding-right: 24px;">
                                 <button class="btn" style="background: transparent; color: var(--secondary-text); padding: 8px;" @click="editOrcamento(o)">
-                                    <i class="fa-solid fa-pen-to-square"></i>
+                                    <i class="fa-solid fa-pen-to-square" style="font-size: 1.3rem;"></i>
                                 </button>
                                 <button class="btn" style="background: transparent; color: var(--error); padding: 8px;" @click="deleteOrcamento(o)">
-                                    <i class="fa-solid fa-trash-can"></i>
+                                    <i class="fa-solid fa-trash-can" style="font-size: 1.3rem;"></i>
                                 </button>
                             </td>
                         </tr>

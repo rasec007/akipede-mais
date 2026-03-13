@@ -1,5 +1,5 @@
 <!-- public/views/modais.php -->
-<div x-show="modal" class="modal-overlay" x-transition style="display: flex;">
+<div x-show="modal" class="modal-overlay" x-transition>
     
     <!-- Modal Cadastrar/Editar Produto (Imagem 06) -->
     <div x-show="modal === 'novo-produto' || modal === 'editar-produto'" class="modal-content" style="max-width: 650px; border-radius: 8px;">
@@ -18,16 +18,22 @@
                     </div>
                 </template>
                 <template x-if="formProduct.foto">
-                    <img :src="'storage-akipede/produtos/' + formProduct.foto.split('/').pop()" style="width: 100%; height: 100%; object-fit: cover;">
+                    <img :src="formProduct.foto.startsWith('http') ? formProduct.foto : (formProduct.foto.startsWith('storage-akipede') ? formProduct.foto : 'storage-akipede/produtos/' + formProduct.foto.split('/').pop())" style="width: 100%; height: 100%; object-fit: cover;">
                 </template>
                 <input type="file" x-ref="fileProduct" style="display: none;" @change="uploadFile($event, 'produtos', 'formProduct')">
             </div>
 
             <!-- Fields -->
             <div style="flex: 1;">
-                <div class="form-group">
-                    <input type="text" id="prod-nome" class="form-control" placeholder="Nome Produto" x-model="formProduct.nome" required>
-                    <label for="prod-nome" class="form-label">Nome Produto</label>
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <input type="text" id="prod-nome" class="form-control" placeholder="Nome Produto" x-model="formProduct.nome" required>
+                        <label for="prod-nome" class="form-label">Nome Produto</label>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" id="prod-cod" class="form-control" placeholder="Cód. Produto" x-model="formProduct.cod_produto">
+                        <label for="prod-cod" class="form-label">Cód. Produto</label>
+                    </div>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
@@ -36,19 +42,29 @@
                         <label for="prod-venda" class="form-label">Valor de Venda</label>
                     </div>
                     <div class="form-group">
-                        <input type="text" id="prod-custo" class="form-control" placeholder="Valor de Custo" x-model="formProduct.valor_custo" required>
-                        <label for="prod-custo" class="form-label">Valor de Custo</label>
+                        <input type="text" id="prod-promo" class="form-control" placeholder="Valor Promo" x-model="formProduct.valor_promocional">
+                        <label for="prod-promo" class="form-label">Valor Promo</label>
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <select id="prod-cat" x-model="formProduct.id_categoria" class="form-control" required style="padding-top: 24px;">
-                        <option value=""></option>
-                        <template x-for="cat in categorias" :key="cat.id_categoria">
-                            <option :value="cat.id_categoria" x-text="cat.nome"></option>
-                        </template>
-                    </select>
-                    <label for="prod-cat" class="form-label" style="top: -10px; left: 12px; font-size: 0.75rem; font-weight: 700; color: var(--primary); background: white; padding: 0 6px; border-radius: 4px;">Categoria</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <input type="text" id="prod-custo" class="form-control" placeholder="Valor de Custo" x-model="formProduct.valor_custo">
+                        <label for="prod-custo" class="form-label">Valor de Custo</label>
+                    </div>
+                    <div class="form-group" style="position: relative;">
+                        <select id="prod-cat" x-model="formProduct.id_categoria" class="form-control" required style="padding-top: 24px; padding-right: 50px; appearance: none; -webkit-appearance: none;">
+                            <option value=""></option>
+                            <template x-for="cat in categorias" :key="cat.id_categoria">
+                                <option :value="cat.id_categoria" x-text="cat.nome"></option>
+                            </template>
+                        </select>
+                        <label for="prod-cat" class="form-label" style="top: -10px; left: 12px; font-size: 0.75rem; font-weight: 700; color: var(--primary); background: white; padding: 0 6px; border-radius: 4px;">Categoria</label>
+                        <button @click="openModal('novo-categoria')" type="button" 
+                                style="position: absolute; right: 10px; top: 12px; background: var(--primary); color: white; border: none; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 5; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            <i class="fa-solid fa-plus" style="font-size: 0.85rem;"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
@@ -61,16 +77,35 @@
         </div>
 
         <div class="form-group" style="margin-top: 8px;">
-            <textarea id="prod-desc" x-model="formProduct.descricao" rows="4" class="form-control" placeholder="Descrição" style="resize: none;"></textarea>
+            <textarea id="prod-desc" x-model="formProduct.descricao" rows="3" class="form-control" placeholder="Descrição" style="resize: none;"></textarea>
             <label for="prod-desc" class="form-label">Descrição</label>
         </div>
 
         <div style="display: flex; gap: 16px; margin-top: 32px;">
             <button @click="modal = null" class="btn" style="flex: 1; background: #f1f4f8; color: var(--secondary-text);">Cancelar</button>
-            <button @click="saveProduct()" class="btn btn-primary" style="flex: 1;">Salvar Alterações</button>
+            <button @click="saveProduct()" class="btn btn-primary" style="flex: 1;" x-text="modal === 'novo-produto' ? 'Cadastrar Novo Produto' : 'Salvar Alterações'"></button>
         </div>
     </div>
 
+    <!-- Modal Nova Categoria (Pop-up inspirado imagem 06.1) -->
+    <div x-show="modal === 'novo-categoria'" class="modal-content" style="max-width: 400px; border-radius: 12px; padding: 32px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+            <h2 class="font-outfit" style="font-size: 1.25rem; font-weight: 700; color: var(--primary-text);">Nova Categoria</h2>
+            <button @click="modal = 'novo-produto'" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--secondary-text);">&times;</button>
+        </div>
+
+        <div class="form-group">
+            <input type="text" id="cat-nome" class="form-control" placeholder="Nome da Categoria" x-model="formCategory.nome">
+            <label for="cat-nome" class="form-label">Nome da Categoria</label>
+        </div>
+
+        <div style="display: flex; gap: 12px; margin-top: 24px;">
+            <button @click="modal = 'novo-produto'" class="btn" style="flex: 1; background: #f1f4f8; color: var(--secondary-text);">Voltar</button>
+            <button @click="saveCategory()" class="btn btn-primary" style="flex: 1;">Cadastrar</button>
+        </div>
+    </div>
+
+    <!-- [Resto dos modais permanecem iguais...] -->
     <!-- Modal Agendamento (Imagem 08) -->
     <div x-show="modal === 'agendamento'" class="modal-content" style="max-width: 400px; border-radius: 12px; padding: 24px;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
@@ -113,7 +148,7 @@
 
         <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 24px;">
             <div @click="$refs.fileCliente.click()" style="width: 84px; height: 84px; border-radius: 8px; overflow: hidden; border: 3px solid var(--primary); margin-bottom: 8px; cursor: pointer; position: relative;">
-                <img :src="formCliente.foto ? 'storage-akipede/usuarios/' + formCliente.foto.split('/').pop() : 'https://via.placeholder.com/84'" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">
+                <img :src="formCliente.foto ? (formCliente.foto.startsWith('http') ? formCliente.foto : 'storage-akipede/usuarios/' + formCliente.foto.split('/').pop()) : 'https://via.placeholder.com/84'" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">
                 <input type="file" x-ref="fileCliente" style="display: none;" @change="uploadFile($event, 'usuarios', 'formCliente')">
             </div>
             <button @click="$refs.fileCliente.click()" class="btn" style="background: transparent; color: var(--primary); font-size: 0.85rem; font-weight: 600;">Alterar Foto</button>
@@ -147,18 +182,42 @@
             <button @click="saveCliente()" class="btn btn-primary" style="flex: 1;">Salvar</button>
         </div>
     </div>
+    <!-- Modal Excluir Produto (NOVO) -->
+    <div class="modal-overlay" x-show="modal === 'excluir-produto'" x-transition style="z-index: 10001;">
+        <div class="modal-content" @click.away="modal = null" style="max-width: 450px; text-align: center;">
+            <div style="margin-bottom: 24px;">
+                <div style="width: 80px; height: 80px; background: rgba(226, 28, 61, 0.1); color: var(--error); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 2rem;">
+                    <i class="fa-solid fa-trash-can"></i>
+                </div>
+                <h2 class="font-outfit" style="font-size: 1.5rem; margin-bottom: 8px;">Excluir Produto?</h2>
+                <p style="color: var(--secondary-text); font-size: 0.95rem;">Você está prestes a remover este produto definitivamente do seu catálogo.</p>
+            </div>
 
+            <div style="background: #f1f4f8; border-radius: 12px; padding: 16px; margin-bottom: 24px; display: flex; align-items: center; text-align: left;">
+                <img :src="productToDelete.foto || 'https://via.placeholder.com/60'" style="width: 60px; height: 60px; border-radius: 8px; object-fit: cover; margin-right: 16px;">
+                <div style="flex: 1; overflow: hidden;">
+                    <p style="font-weight: 700; color: var(--primary-text); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;" x-text="productToDelete.nome"></p>
+                    <p style="font-size: 0.85rem; color: var(--secondary-text);" x-text="formatMoney(productToDelete.valor_venda)"></p>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <button @click="modal = null" class="btn" style="background: #e0e3e7; color: var(--primary-text);">Cancelar</button>
+                <button @click="confirmDeleteProduct()" class="btn btn-error">Excluir Agora</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <style>
     .modal-overlay { 
-        position: fixed; top: 0; left: 0; width: 100%; height: 100vh; 
-        background: rgba(16, 18, 19, 0.45); /* overlay mais escuro conforme FF */
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+        background: rgba(16, 18, 19, 0.45);
         backdrop-filter: blur(4px); 
-        align-items: center; justify-content: center; z-index: 2000; 
+        display: flex; align-items: center; justify-content: center; z-index: 2000; 
     }
     .modal-content { 
-        background: white; padding: 32px; width: 95%; 
+        background: white; padding: 32px; width: 95%; max-height: 90vh; overflow-y: auto;
         box-shadow: 0 10px 30px rgba(0,0,0,0.15); 
     }
 </style>
