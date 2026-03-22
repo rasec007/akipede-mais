@@ -18,11 +18,11 @@
                 <thead>
                     <tr>
                         <th style="padding-left: 24px;">Nome</th>
-                        <th>Categoria</th>
-                        <th>Preço</th>
-                        <th>Agendamento</th>
-                        <th>Status</th>
-                        <th style="text-align: right; padding-right: 24px;">Ações</th>
+                        <th style="text-align: center;">Categoria</th>
+                        <th style="text-align: center;">Preço</th>
+                        <th style="text-align: center;">Agendamento</th>
+                        <th style="text-align: center;">Status</th>
+                        <th style="text-align: center; padding-right: 24px;">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -32,24 +32,24 @@
                                 <img :src="p.foto || 'https://via.placeholder.com/48'" alt="Prod" style="width: 48px; height: 48px; border-radius: 8px; margin-right: 12px; object-fit: cover;" loading="lazy">
                                 <span style="font-weight: 600;" x-text="p.nome"></span>
                             </td>
-                            <td x-text="p.categoria_nome || '-'"></td>
-                            <td style="font-weight: 700; color: var(--alternate);" x-text="formatMoney(p.valor_venda)"></td>
-                            <td>
+                            <td style="text-align: center;" x-text="p.categoria_nome || '-'"></td>
+                            <td style="font-weight: 700; color: var(--alternate); text-align: center;" x-text="formatMoney(p.valor_venda)"></td>
+                            <td style="text-align: center;">
                                 <button class="btn" style="background: rgba(4, 219, 126, 0.1); color: var(--primary); padding: 8px; border-radius: 8px;" @click="openAgendamento(p)">
-                                    <i class="fa-regular fa-calendar-check" style="font-size: 1.3rem;"></i>
+                                    <i class="fa-regular fa-calendar-check" style="font-size: calc(1.3rem + 5px);"></i>
                                 </button>
                             </td>
-                            <td>
-                                <div class="switch" :class="{ 'active': p.ativo }" @click="toggleProductStatus(p)">
+                            <td style="text-align: center;">
+                                <div class="switch" :class="{ 'active': p.ativo }" @click="toggleProductStatus(p)" style="margin: 0 auto;">
                                     <div class="handle"></div>
                                 </div>
                             </td>
-                            <td style="text-align: right; padding-right: 24px;">
+                            <td style="text-align: center; padding-right: 24px;">
                                 <button class="btn" style="background: transparent; color: var(--secondary-text); padding: 8px;" @click="editProduct(p)">
-                                    <i class="fa-solid fa-pen-to-square" style="font-size: 1.3rem;"></i>
+                                    <i class="fa-solid fa-pen-to-square" style="font-size: calc(1.3rem + 5px);"></i>
                                 </button>
                                 <button class="btn" style="background: transparent; color: var(--error); padding: 8px;" @click="deleteProduct(p)">
-                                    <i class="fa-solid fa-trash-can" style="font-size: 1.3rem;"></i>
+                                    <i class="fa-solid fa-trash-can" style="font-size: calc(1.3rem + 5px);"></i>
                                 </button>
                             </td>
                         </tr>

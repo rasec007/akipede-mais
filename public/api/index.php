@@ -178,6 +178,18 @@ switch($resource) {
             echo json_encode($controller->getById($id));
         }
         break;
+    case 'agenda':
+        require_once __DIR__ . '/controllers/AgendaController.php';
+        $controller = new AgendaController((new Database())->getConnection());
+        if ($request_method == 'GET') {
+            $produto_id = $_GET['produto_id'] ?? null;
+            if ($produto_id) {
+                echo json_encode($controller->getByProduto($produto_id));
+            } else {
+                echo json_encode([]);
+            }
+        }
+        break;
     default:
         http_response_code(404);
         echo json_encode(["message" => "Recurso não encontrado"]);

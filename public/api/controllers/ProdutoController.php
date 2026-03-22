@@ -27,9 +27,10 @@ class ProdutoController {
 
     public function readByUser($user_id) {
         $query = "
-            SELECT p.* 
+            SELECT p.*, c.nome as categoria_nome 
             FROM " . $this->table_name . " p
             INNER JOIN loja l ON p.loja = l.id_loja
+            LEFT JOIN categoria c ON p.categoria = c.id_categoria
             WHERE l.users = :user_id
             ORDER BY p.nome ASC
         ";

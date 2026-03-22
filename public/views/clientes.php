@@ -40,10 +40,10 @@
                             </td>
                             <td style="text-align: right; padding-right: 24px;">
                                 <button class="btn" style="background: transparent; color: var(--secondary-text); padding: 8px;" @click="editCliente(c)">
-                                    <i class="fa-solid fa-pen-to-square" style="font-size: 1.3rem;"></i>
+                                    <i class="fa-solid fa-pen-to-square" style="font-size: calc(1.3rem + 5px);"></i>
                                 </button>
                                 <button class="btn" style="background: transparent; color: var(--error); padding: 8px;" @click="deleteCliente(c)">
-                                    <i class="fa-solid fa-trash-can" style="font-size: 1.3rem;"></i>
+                                    <i class="fa-solid fa-trash-can" style="font-size: calc(1.3rem + 5px);"></i>
                                 </button>
                             </td>
                         </tr>

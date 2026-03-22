@@ -14,3 +14,14 @@
 [2026-03-12 02:38:05] Tentativa: 'teste@teste.com'. Achou? NAO
 [2026-03-12 21:54:35] Tentativa: 'rasec007@gmail.com'. Achou? SIM
 [2026-03-12 22:28:46] Tentativa: 'rasec007@gmail.com'. Achou? SIM
+[2026-03-15 01:00:09] Tentativa: 'rasec0007+novaempresa@gmail.com'. Achou? NAO
+[2026-03-15 01:00:22] Tentativa: 'rasec007+novaempresa@gmail.com'. Achou? SIM
+[2026-03-15 01:00:43] Tentativa: 'rasec0007+novaempresa@gmail.com'. Achou? NAO
+[2026-03-15 01:00:48] Tentativa: 'rasec007+novaempresa@gmail.com'. Achou? SIM
+[2026-03-15 01:02:19] Tentativa: 'rasec007+novaempresa@gmail.com'. Achou? SIM
+[2026-03-15 01:04:48] Tentativa: 'rasec007+novaempresa@gmail.com'. Achou? SIM
+[2026-03-15 01:05:37] Tentativa: 'rasec007+novaempresa@gmail.com'. Achou? SIM
+[2026-03-15 01:05:58] Tentativa: 'rasec007@gmail.com'. Achou? SIM
+[2026-03-22 01:33:23] Tentativa: 'rasec007@gmail.com'. Achou? SIM
+[2026-03-22 01:33:29] Tentativa: 'rasec007@gmail.com'. Achou? SIM
+[2026-03-22 01:33:33] Tentativa: 'rasec007@gmail.com'. Achou? SIM

@@ -10,6 +10,7 @@ function app() {
         searchCliente: '',
         searchProduct: '',
         searchOrcamento: '',
+        filterOrcamentoStatus: 'Pendentes',
         currentTab: 'home',
         stats: { 
             produtos: 0, 
@@ -26,9 +27,15 @@ function app() {
         loadingUpload: false,
         _pollingInterval: null,
         formProduct: { nome: '', valor_venda: '', valor_promocional: '', cod_produto: '', valor_custo: '', id_categoria: '', ativo: true, descricao: '', foto: '' },
-        formCategory: { nome: '' },
-        formAgendamento: { ativo: false, tempo: 0, pId: null },
-        formCliente: { nome: '', email: '', perfil: 'Usuário', foto: '' },
+        formCategory: { id_categoria: null, nome: '', icone: '', ativo: true },
+        formAgendamento: { ativo: false, tempo: 0, pId: null, nome: '', currentYear: new Date().getFullYear(), currentMonth: new Date().getMonth(), days: [], agendamentosGerais: [], selectedDay: null, selectedDayAgendamentos: [] },
+        formCliente: { id_cliente: null, nome: '', apelido: '', email: '', fone: '', cpf: '', perfil: 'Usuário', foto: '' },
+        formOrcamento: { numero_sequencial: '', cliente_id: '', dt_criado: new Date().toISOString().split('T')[0], validade_dias: 30, dt_inicio: '', dt_fim: '', observacoes: '', subtotal: 0, descontos: 0, valor_total: 0 },
+        novoItemOrcamento: { produto_id: '', quantidade: 1, valor_unit: 0, total: 0 },
+        orcamentoItens: [],
+        productToDelete: null,
+        clienteToDelete: null,
+        orcamentoToDelete: null,
         categorias: [],
         
         init() {
@@ -181,31 +188,130 @@ function app() {
         editCliente(c) { this.formCliente = { ...c }; this.modal = 'editar-cliente'; },
 
         openAgendamento(p) {
+            const now = new Date();
             this.formAgendamento = {
                 ativo: parseFloat(p.agendamento) > 0,
                 tempo: parseFloat(p.agendamento) > 0 ? parseFloat(p.agendamento) : 0,
-                pId: p.id_produto
+                pId: p.id_produto,
+                nome: p.nome,
+                currentYear: now.getFullYear(),
+                currentMonth: now.getMonth(),
+                days: [],
+                agendamentosGerais: [],
+                selectedDay: null,
+                selectedDayAgendamentos: []
             };
+            this.generateCalendar(); // Renderiza vazio sem bug do reativo imediatamente
+            this.loadAgendaProduto(p.id_produto);
             this.modal = 'agendamento';
         },
 
-        saveAgendamento() {
-            const p = this.products.find(prod => prod.id_produto === this.formAgendamento.pId);
-            if (p) {
-                p.agendamento = this.formAgendamento.ativo ? this.formAgendamento.tempo : 0;
-                
-                // Salvando no banco de dados
-                fetch('api/index.php/produtos?id=' + p.id_produto, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(p)
-                })
+        loadAgendaProduto(produto_id) {
+            fetch(`api/index.php/agenda?produto_id=${produto_id}`)
                 .then(res => res.json())
                 .then(data => {
-                    this.showToast(`Agendamento de "${p.nome}" atualizado!`);
+                    this.formAgendamento.agendamentosGerais = data;
+                    this.generateCalendar(); // Atualiza re-adicionando seções preenchidas
                 })
-                .catch(err => this.showToast(`Erro ao atualizar agendamento de "${p.nome}"`, 'error'));
+                .catch(err => console.error("Erro ao carregar agendamentos:", err));
+        },
+
+        generateCalendar() {
+            const year = this.formAgendamento.currentYear;
+            const month = this.formAgendamento.currentMonth;
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            
+            let days = [];
+            // Preencher dias vazios do início (base zero - domingo a sábado)
+            for (let i = 0; i < firstDay; i++) {
+                days.push({ day: null, dateStr: null, hasAgendamento: false });
             }
+            
+            // Preencher os dias do mês
+            for (let i = 1; i <= daysInMonth; i++) {
+                // Monta string YYYY-MM-DD segura para o fuso local
+                const currStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                
+                // Checa se tem algum agendamento pro dia e soma as quantidades
+                let hasAg = false;
+                let totalQtd = 0;
+                
+                this.formAgendamento.agendamentosGerais.forEach(ag => {
+                    if (ag.data_inicio && ag.data_inicio.substring(0, 10) === currStr) {
+                        hasAg = true;
+                        totalQtd += parseInt(ag.quantidade || 1);
+                    }
+                });
+
+                days.push({ day: i, dateStr: currStr, hasAgendamento: hasAg, totalQtd: totalQtd });
+            }
+            
+            // Completar última semana se precisar
+            const remainder = days.length % 7;
+            if (remainder !== 0) {
+                const addObj = 7 - remainder;
+                for (let i = 0; i < addObj; i++) {
+                    days.push({ day: null, dateStr: null, hasAgendamento: false });
+                }
+            }
+            
+            this.formAgendamento.days = days;
+            this.formAgendamento.selectedDay = null;
+            this.formAgendamento.selectedDayAgendamentos = [];
+        },
+
+        prevMonthCalendar() {
+            let m = this.formAgendamento.currentMonth - 1;
+            let y = this.formAgendamento.currentYear;
+            if (m < 0) { m = 11; y--; }
+            this.formAgendamento.currentMonth = m;
+            this.formAgendamento.currentYear = y;
+            this.generateCalendar();
+        },
+
+        nextMonthCalendar() {
+            let m = this.formAgendamento.currentMonth + 1;
+            let y = this.formAgendamento.currentYear;
+            if (m > 11) { m = 0; y++; }
+            this.formAgendamento.currentMonth = m;
+            this.formAgendamento.currentYear = y;
+            this.generateCalendar();
+        },
+
+        selectCalendarDay(dayObj) {
+            if(!dayObj.day) return;
+            this.formAgendamento.selectedDay = dayObj.dateStr;
+            this.formAgendamento.selectedDayAgendamentos = this.formAgendamento.agendamentosGerais.filter(ag => {
+                if(!ag.data_inicio) return false;
+                return ag.data_inicio.substring(0, 10) === dayObj.dateStr;
+            });
+        },
+
+        getCalendarMonthName() {
+            const m = this.formAgendamento.currentMonth;
+            const y = this.formAgendamento.currentYear;
+            const months = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+            return `${months[m]} de ${y}`;
+        },
+
+        formatDateTimeRange(dt) {
+            if(!dt) return '';
+            const dateObj = new Date(dt);
+            // Corrige se timezone for problemático mostrando hora certa do banco
+            // Como postgres pode retornar "YYYY-MM-DD HH:MM:SS"
+            const strPart = dt.split(' ');
+            if (strPart.length === 2) {
+                const ds = strPart[0].split('-');
+                const ts = strPart[1].split(':');
+                return `${parseInt(ds[2])}/${parseInt(ds[1])}/${ds[0]} ${ts[0]}:${ts[1]}`;
+            }
+            return dateObj.toLocaleString('pt-BR').substring(0, 16);
+        },
+
+        saveAgendamento() {
+            // Este método de "save configuração de tempo" no produto foi substituído pelo novo modal. 
+            // O design novo foca na agenda do produto e não de configurar o switch. Se for o caso, pode ser adaptado.
             this.modal = null;
         },
 
@@ -440,9 +546,107 @@ function app() {
         },
 
         filteredOrcamentos() {
-            if (!this.searchOrcamento) return this.orcamentos;
-            const s = this.searchOrcamento.toLowerCase();
-            return this.orcamentos.filter(o => o.cliente_nome.toLowerCase().includes(s));
+            let res = this.orcamentos;
+            
+            // Filtro por status (Abas)
+            if (this.filterOrcamentoStatus) {
+                res = res.filter(o => o.status === this.filterOrcamentoStatus || (this.filterOrcamentoStatus === 'Pendentes' && o.status === 'Pendente'));
+            }
+            
+            // Filtro por texto
+            if (this.searchOrcamento) {
+                const s = this.searchOrcamento.toLowerCase();
+                res = res.filter(o => o.cliente_nome.toLowerCase().includes(s) || (o.numero_sequencial && String(o.numero_sequencial).includes(s)));
+            }
+            
+            return res;
+        },
+
+        updateNovoItemValor() {
+            if (this.novoItemOrcamento.produto_id) {
+                const p = this.produtos.find(prod => prod.id_produto == this.novoItemOrcamento.produto_id);
+                if (p) {
+                    this.novoItemOrcamento.valor_unit = parseFloat(p.valor_venda) || 0;
+                }
+            } else {
+                this.novoItemOrcamento.valor_unit = 0;
+            }
+        },
+
+        addItemOrcamento() {
+            if (!this.novoItemOrcamento.produto_id || this.novoItemOrcamento.quantidade < 1) {
+                alert('Selecione um produto e a quantidade.');
+                return;
+            }
+            const p = this.produtos.find(prod => prod.id_produto == this.novoItemOrcamento.produto_id);
+            if (!p) return;
+            
+            this.orcamentoItens.push({
+                produto_id: p.id_produto,
+                nome_produto: p.nome,
+                quantidade: this.novoItemOrcamento.quantidade,
+                valor_unitario: this.novoItemOrcamento.valor_unit
+            });
+            
+            this.novoItemOrcamento = { produto_id: '', quantidade: 1, valor_unit: 0, total: 0 };
+            this.calculateOrcamentoTotal();
+        },
+
+        removeItemOrcamento(index) {
+            this.orcamentoItens.splice(index, 1);
+            this.calculateOrcamentoTotal();
+        },
+
+        calculateOrcamentoTotal() {
+            this.formOrcamento.subtotal = this.orcamentoItens.reduce((acc, item) => acc + (item.quantidade * item.valor_unitario), 0);
+            const desc = parseFloat(this.formOrcamento.descontos) || 0;
+            this.formOrcamento.valor_total = this.formOrcamento.subtotal - desc;
+        },
+
+        async saveOrcamento() {
+            if (!this.formOrcamento.cliente_id) {
+                alert('Selecione o cliente.');
+                return;
+            }
+            if (this.orcamentoItens.length === 0) {
+                alert('Adicione pelo menos um item.');
+                return;
+            }
+            
+            const payload = {
+                action: 'create',
+                numero_sequencial: this.formOrcamento.numero_sequencial || '1',
+                cliente_id: this.formOrcamento.cliente_id,
+                dt_criado: this.formOrcamento.dt_criado,
+                validade_dias: this.formOrcamento.validade_dias,
+                dt_inicio: this.formOrcamento.dt_inicio || null,
+                dt_fim: this.formOrcamento.dt_fim || null,
+                observacoes: this.formOrcamento.observacoes,
+                subtotal: this.formOrcamento.subtotal,
+                descontos: this.formOrcamento.descontos || 0,
+                valor_total: this.formOrcamento.valor_total,
+                itens: this.orcamentoItens.map(i => ({ produto_id: i.produto_id, quantidade: i.quantidade, valor_unitario: i.valor_unitario }))
+            };
+            
+            try {
+                const res = await fetch('api/index.php/orcamentos', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    this.modal = null;
+                    await this.loadOrcamentos();
+                    this.orcamentoItens = [];
+                    this.formOrcamento = { numero_sequencial: '', cliente_id: '', dt_criado: new Date().toISOString().split('T')[0], validade_dias: 30, dt_inicio: '', dt_fim: '', observacoes: '', subtotal: 0, descontos: 0, valor_total: 0 };
+                } else {
+                    alert('Erro ao criar orçamento: ' + (data.message || ''));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Erro na requisição');
+            }
         },
 
         formatDate(dateStr) {

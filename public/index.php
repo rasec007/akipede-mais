@@ -53,7 +53,7 @@ $loggedUser = getLoggedUser();
         </nav>
 
         <div class="sidebar-footer">
-            <a href="#" @click.prevent="logout()" class="nav-link">
+            <a href="#" @click.prevent="modal = 'confirmar-logout'" class="nav-link">
                 <i class="fa-solid fa-right-from-bracket"></i> Sair
             </a>
             
