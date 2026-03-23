@@ -2,8 +2,11 @@
 function app() {
     return {
         user: {},
-        products: [],
+        produtos: [],
         topProducts: [],
+        topOrders: [],
+        topClients: [],
+        topPartners: [],
         orcamentos: [],
         orders: [],
         clientes: [],
@@ -14,24 +17,23 @@ function app() {
         currentTab: 'home',
         stats: { 
             produtos: 0, 
-            orcamentos: 3, 
+            orcamentos: 0, 
             parceiros: 0,
             clientes: 0,
             pedidos: 0,
-            valor_vendas: '0,00'
+            valor_vendas: 0
         },
         toasts: [],
         lastNotification: '',
-        productToDelete: {},
         modal: null,
         loadingUpload: false,
         _pollingInterval: null,
         formProduct: { nome: '', valor_venda: '', valor_promocional: '', cod_produto: '', valor_custo: '', id_categoria: '', ativo: true, descricao: '', foto: '' },
         formCategory: { id_categoria: null, nome: '', icone: '', ativo: true },
         formAgendamento: { ativo: false, tempo: 0, pId: null, nome: '', currentYear: new Date().getFullYear(), currentMonth: new Date().getMonth(), days: [], agendamentosGerais: [], selectedDay: null, selectedDayAgendamentos: [] },
-        formCliente: { id_cliente: null, nome: '', apelido: '', email: '', fone: '', cpf: '', perfil: 'Usuário', foto: '' },
+        formCliente: { id_cliente: null, nome: '', apelido: '', email: '', fone: '', cpf: '', obs: '', logradouro: '', num: '', complemento: '', bairro: '', cidade: '', estado: '', cep: '', perfil: 'Usuário', foto: '', senha: '' },
         formOrcamento: { numero_sequencial: '', cliente_id: '', dt_criado: new Date().toISOString().split('T')[0], validade_dias: 30, dt_inicio: '', dt_fim: '', observacoes: '', subtotal: 0, descontos: 0, valor_total: 0 },
-        novoItemOrcamento: { produto_id: '', quantidade: 1, valor_unit: 0, total: 0 },
+        novoItemOrcamento: { produto_id: '', quantidade: 1, valor_unitario: 0, total: 0, qtd_prevista: '-' },
         orcamentoItens: [],
         productToDelete: null,
         clienteToDelete: null,
@@ -42,6 +44,39 @@ function app() {
             console.log('Akipede Mais Premium (Fidelity Pass) inicializado');
             this.loadUserData();
             this.setupRealtime();
+        },
+
+        mountGooglePlaces(inputEl) {
+            const tentarIniciar = () => {
+                if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
+                    setTimeout(tentarIniciar, 500);
+                    return;
+                }
+                try {
+                    const autocomplete = new google.maps.places.Autocomplete(inputEl, {
+                        types: ['address'],
+                        componentRestrictions: { country: 'br' }
+                    });
+                    autocomplete.addListener('place_changed', () => {
+                        const place = autocomplete.getPlace();
+                        if (place && place.formatted_address) {
+                            this.formCliente.logradouro = place.formatted_address;
+                            inputEl.value = place.formatted_address;
+                            inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+                            for (const component of place.address_components) {
+                                const type = component.types[0];
+                                if (type === 'administrative_area_level_2') this.formCliente.cidade = component.long_name;
+                                if (type === 'administrative_area_level_1') this.formCliente.estado = component.short_name;
+                                if (type === 'sublocality_level_1' || type === 'sublocality') this.formCliente.bairro = component.long_name;
+                                if (type === 'postal_code') this.formCliente.cep = component.long_name;
+                            }
+                        }
+                    });
+                } catch (e) {
+                    console.error("Erro Google Maps no input:", e);
+                }
+            };
+            tentarIniciar();
         },
 
         loadUserData() {
@@ -77,6 +112,22 @@ function app() {
             return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(number);
         },
 
+        maskPhone(val) {
+            if (!val) return '';
+            let v = val.replace(/\D/g, '');
+            if (v.length > 11) v = v.slice(0, 11);
+            if (v.length > 10) {
+                return v.replace(/^(\d{2})(\d)(\d{4})(\d{4}).*/, '($1) $2 $3-$4');
+            } else if (v.length > 6) {
+                return v.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
+            } else if (v.length > 2) {
+                return v.replace(/^(\d{2})(\d{0,5})/, '($1) $2');
+            } else if (v.length > 0) {
+                return v.replace(/^(\d*)/, '($1');
+            }
+            return v;
+        },
+
         showToast(message, type = 'success') {
             const id = Date.now();
             this.toasts.push({ id, message, type });
@@ -86,25 +137,29 @@ function app() {
         },
 
         loadInitialData() {
-            // Carregar Produtos
+            // Carregar Dados Consolidados do Dashboard
+            fetch('api/index.php/dashboard-stats')
+                .then(res => res.json())
+                .then(data => {
+                    this.topProducts = data.top_products || [];
+                    this.topOrders = data.top_orders || [];
+                    this.topClients = data.top_clients || [];
+                    this.topPartners = data.top_partners || [];
+                    this.stats = {
+                        produtos: data.summary.produtos || 0,
+                        orcamentos: data.summary.pedidos || 0,
+                        parceiros: data.summary.parceiros || 0,
+                        clientes: data.summary.clientes || 0,
+                        pedidos: data.summary.pedidos || 0,
+                        valor_vendas: data.summary.valor_vendas || 0
+                    };
+                });
+
+            // Carregar Produtos (para as outras abas)
             fetch('api/index.php/produtos')
                 .then(res => res.json())
                 .then(data => {
-                    this.products = data;
-                    this.stats.produtos = data.length;
-                    
-                    // Dashboard: Popular Top 10 com produtos reais
-                    // Como não temos tabela de vendas consolidada ainda, mostramos os últimos cadastrados
-                    this.topProducts = [...data]
-                        .sort((a, b) => b.dt_criado ? b.dt_criado.localeCompare(a.dt_criado) : 0)
-                        .slice(0, 10)
-                        .map(p => ({
-                            ...p,
-                            id: p.id_produto,
-                            total_pedidos: Math.floor(Math.random() * 5), // Dummy para visual
-                            total_vendidos: Math.floor(Math.random() * 20), // Dummy para visual
-                            valor_total: p.valor_venda // Dummy para visual
-                        }));
+                    this.produtos = data;
                 });
 
             // Carregar Orçamentos
@@ -128,6 +183,15 @@ function app() {
                 .then(res => res.json())
                 .then(data => {
                     this.categorias = data;
+                });
+        },
+
+        loadClientes() {
+            fetch('api/index.php/clientes')
+                .then(res => res.json())
+                .then(data => {
+                    this.clientes = data;
+                    if (this.stats) this.stats.clientes = data.length;
                 });
         },
 
@@ -169,7 +233,43 @@ function app() {
                 this.formCategory = { nome: '' };
             } else if (name === 'novo-cliente') {
                 this.formCliente = { nome: '', email: '', perfil: 'Usuário', foto: '' };
+            } else if (name === 'novo-orcamento') {
+                // Calcular próximo número sequencial
+                const nums = this.orcamentos.map(o => parseInt(o.numero_sequencial) || 0);
+                const maxNum = nums.length > 0 ? Math.max(...nums) : 0;
+                
+                // Datas locais para o datetime-local
+                const now = new Date();
+                const offset = now.getTimezoneOffset() * 60000;
+                const dt_inicio = (new Date(now.getTime() - offset)).toISOString().slice(0, 16);
+                const dt_fim = (new Date(now.getTime() - offset + 3600000)).toISOString().slice(0, 16); // +1h
+
+                this.formOrcamento = {
+                    numero_sequencial: (maxNum + 1).toString(),
+                    cliente_id: '',
+                    parceiro_id: this.user.id || '',
+                    parceiro_nome: this.user.nome || '',
+                    dt_criado: new Date().toISOString().split('T')[0],
+                    validade_dias: 30,
+                    validade: '',
+                    dt_inicio: dt_inicio,
+                    dt_fim: dt_fim,
+                    observacoes: '',
+                    subtotal: 0,
+                    descontos: 0,
+                    descontos_display: 'R$ 0,00',
+                    valor_total: 0
+                };
+                this.orcamentoItens = [];
+                this.calculateValidade();
             }
+        },
+
+        calculateValidade() {
+            if (!this.formOrcamento.dt_criado || !this.formOrcamento.validade_dias) return;
+            const date = new Date(this.formOrcamento.dt_criado + 'T12:00:00'); // Evitar timezone shift
+            date.setDate(date.getDate() + parseInt(this.formOrcamento.validade_dias));
+            this.formOrcamento.validade = date.toISOString().split('T')[0];
         },
 
         editProduct(p) { 
@@ -398,19 +498,58 @@ function app() {
             const method = this.modal === 'editar-cliente' ? 'PUT' : 'POST';
             const endpoint = 'api/index.php/clientes' + (method === 'PUT' ? '?id=' + this.formCliente.id_cliente : '');
             
+            const payload = { ...this.formCliente };
+            payload.loja = this.user.loja_id || this.user.loja;
+            payload.cpf_cnpj = this.formCliente.cpf; // Mapeia para o nome esperado no DB
+
+            // Lógica de Apelido Automático (Primeiro + Último Nome)
+            if (payload.nome) {
+                const names = payload.nome.trim().split(/\s+/);
+                if (names.length > 1) {
+                    payload.apelido = `${names[0]} ${names[names.length - 1]}`;
+                } else {
+                    payload.apelido = names[0];
+                }
+            }
+
             fetch(endpoint, {
                 method: method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(this.formCliente)
+                body: JSON.stringify(payload)
             })
             .then(res => res.json())
             .then(data => {
-                const msg = method === 'POST' ? `Cliente "${this.formCliente.nome}" cadastrado com sucesso!` : `Cliente "${this.formCliente.nome}" atualizado com sucesso!`;
-                this.showToast(msg);
-                this.modal = null;
-                this.loadInitialData();
+                if (data.error) {
+                    this.showToast('Erro ao salvar cliente: ' + data.error, 'error');
+                } else {
+                    const msg = method === 'POST' ? `Cliente "${this.formCliente.nome}" cadastrado com sucesso!` : `Cliente "${this.formCliente.nome}" atualizado com sucesso!`;
+                    this.showToast(msg);
+                    this.modal = null;
+                    this.loadClientes();
+                }
             })
             .catch(err => this.showToast('Erro ao salvar cliente', 'error'));
+        },
+
+        deleteCliente(c) {
+            this.clienteToDelete = { ...c };
+            this.modal = 'excluir-cliente';
+        },
+
+        confirmDeleteCliente() {
+            const c = this.clienteToDelete;
+            fetch('api/index.php/clientes?id=' + c.id_cliente, { method: 'DELETE' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) {
+                        this.showToast('Erro ao excluir cliente: ' + data.error, 'error');
+                    } else {
+                        this.showToast(`Cliente "${c.nome}" excluído com sucesso!`);
+                        this.modal = null;
+                        this.loadClientes();
+                    }
+                })
+                .catch(err => this.showToast(`Erro ao excluir cliente "${c.nome}"`, 'error'));
         },
 
         deleteProduct(p) {
@@ -435,17 +574,6 @@ function app() {
                     console.error(err);
                     this.showToast('Erro ao excluir produto', 'error');
                 });
-        },
-
-        deleteCliente(c) {
-            if (!confirm(`Deseja realmente excluir o usuário/cliente "${c.nome}"?`)) return;
-            fetch('api/index.php/clientes?id=' + c.id_cliente, { method: 'DELETE' })
-                .then(res => res.json())
-                .then(data => {
-                    this.showToast(`Cliente "${c.nome}" excluído com sucesso!`);
-                    this.loadInitialData();
-                })
-                .catch(err => this.showToast(`Erro ao excluir cliente "${c.nome}"`, 'error'));
         },
 
         deleteOrcamento(o) {
@@ -540,37 +668,94 @@ function app() {
         },
 
         filteredProducts() {
-            if (!this.searchProduct) return this.products;
+            if (!this.searchProduct) return this.produtos;
             const s = this.searchProduct.toLowerCase();
-            return this.products.filter(p => p.nome.toLowerCase().includes(s));
+            return this.produtos.filter(p => p.nome.toLowerCase().includes(s));
         },
 
         filteredOrcamentos() {
             let res = this.orcamentos;
             
+            // Mapa de abas (plural) para status do banco (uppercase)
+            const statusMap = {
+                'Pendentes': 'PENDENTE',
+                'Aprovados': 'APROVADO',
+                'Cancelados': 'CANCELADO'
+            };
+            
             // Filtro por status (Abas)
-            if (this.filterOrcamentoStatus) {
-                res = res.filter(o => o.status === this.filterOrcamentoStatus || (this.filterOrcamentoStatus === 'Pendentes' && o.status === 'Pendente'));
+            if (this.filterOrcamentoStatus && statusMap[this.filterOrcamentoStatus]) {
+                const target = statusMap[this.filterOrcamentoStatus];
+                res = res.filter(o => (o.status || '').toUpperCase() === target);
             }
             
             // Filtro por texto
             if (this.searchOrcamento) {
                 const s = this.searchOrcamento.toLowerCase();
-                res = res.filter(o => o.cliente_nome.toLowerCase().includes(s) || (o.numero_sequencial && String(o.numero_sequencial).includes(s)));
+                res = res.filter(o => (o.cliente_nome || '').toLowerCase().includes(s) || (o.numero_sequencial && String(o.numero_sequencial).includes(s)));
             }
             
             return res;
         },
 
         updateNovoItemValor() {
-            if (this.novoItemOrcamento.produto_id) {
-                const p = this.produtos.find(prod => prod.id_produto == this.novoItemOrcamento.produto_id);
-                if (p) {
-                    this.novoItemOrcamento.valor_unit = parseFloat(p.valor_venda) || 0;
+            // Use == para comparar IDs UUID vs string de forma flexível
+            const p = this.produtos.find(prod => prod.id_produto == this.novoItemOrcamento.produto_id);
+            if (p) {
+                this.novoItemOrcamento.valor_unitario = parseFloat(p.valor_venda) || 0;
+                // Travar quantidade no máximo do estoque
+                const estoqueArr = parseInt(p.qtd_atual);
+                if (!isNaN(estoqueArr) && this.novoItemOrcamento.quantidade > estoqueArr) {
+                    this.novoItemOrcamento.quantidade = estoqueArr > 0 ? estoqueArr : 1;
                 }
+                this.fetchDisponibilidade();
             } else {
-                this.novoItemOrcamento.valor_unit = 0;
+                this.novoItemOrcamento.valor_unitario = 0;
+                this.novoItemOrcamento.qtd_prevista = '-';
             }
+        },
+
+        async fetchDisponibilidade() {
+            const produto_id = this.novoItemOrcamento.produto_id;
+            const dt_inicio = this.formOrcamento.dt_inicio;
+            const dt_fim = this.formOrcamento.dt_fim;
+            
+            // Só busca se todos os dados estiverem preenchidos
+            if (!produto_id || !dt_inicio || !dt_fim) {
+                this.novoItemOrcamento.qtd_prevista = '-';
+                return;
+            }
+
+            try {
+                // Usando o endpoint registrado no api/index.php
+                const res = await fetch(`api/index.php/disponibilidade?produto_id=${produto_id}&inicio=${dt_inicio}&fim=${dt_fim}`);
+                const data = await res.json();
+                
+                if (data.status === 'success') {
+                    // Garante que o valor seja convertido para string para exibição correta
+                    this.novoItemOrcamento.qtd_prevista = data.qtd_prevista.toString();
+                } else {
+                    this.novoItemOrcamento.qtd_prevista = '0';
+                }
+            } catch (err) {
+                console.error('Erro ao buscar disponibilidade:', err);
+                this.novoItemOrcamento.qtd_prevista = 'Erro';
+            }
+        },
+
+        calculateValidade() {
+            if (!this.formOrcamento.dt_criado || !this.formOrcamento.validade_dias) return;
+            const date = new Date(this.formOrcamento.dt_criado + 'T00:00:00');
+            date.setDate(date.getDate() + parseInt(this.formOrcamento.validade_dias));
+            this.formOrcamento.dt_validade = date.toISOString().split('T')[0];
+        },
+
+        applyDiscountMask(value) {
+            let cleanValue = value.replace(/\D/g, '');
+            let numberValue = parseFloat(cleanValue) / 100 || 0;
+            this.formOrcamento.descontos = numberValue;
+            this.formOrcamento.descontos_display = this.formatMoney(numberValue);
+            this.calculateOrcamentoTotal();
         },
 
         addItemOrcamento() {
@@ -585,10 +770,10 @@ function app() {
                 produto_id: p.id_produto,
                 nome_produto: p.nome,
                 quantidade: this.novoItemOrcamento.quantidade,
-                valor_unitario: this.novoItemOrcamento.valor_unit
+                valor_unitario: this.novoItemOrcamento.valor_unitario
             });
             
-            this.novoItemOrcamento = { produto_id: '', quantidade: 1, valor_unit: 0, total: 0 };
+            this.novoItemOrcamento = { produto_id: '', quantidade: 1, valor_unitario: 0, total: 0, qtd_prevista: '-' };
             this.calculateOrcamentoTotal();
         },
 
@@ -613,19 +798,28 @@ function app() {
                 return;
             }
             
+            const selectedClient = this.clientes.find(c => c.id_cliente === this.formOrcamento.cliente_id);
             const payload = {
-                action: 'create',
-                numero_sequencial: this.formOrcamento.numero_sequencial || '1',
-                cliente_id: this.formOrcamento.cliente_id,
-                dt_criado: this.formOrcamento.dt_criado,
-                validade_dias: this.formOrcamento.validade_dias,
-                dt_inicio: this.formOrcamento.dt_inicio || null,
-                dt_fim: this.formOrcamento.dt_fim || null,
-                observacoes: this.formOrcamento.observacoes,
-                subtotal: this.formOrcamento.subtotal,
-                descontos: this.formOrcamento.descontos || 0,
+                parceiro: this.formOrcamento.parceiro_id,
+                cliente_nome: this.formOrcamento.cliente_id,
+                cliente_cpf_cnpj: selectedClient ? selectedClient.cpf_cnpj : '',
+                cliente_fone: selectedClient ? selectedClient.fone : '',
+                loja: this.user.loja_id,
+                status: 'Pendentes',
+                validade: this.formOrcamento.dt_validade,
                 valor_total: this.formOrcamento.valor_total,
-                itens: this.orcamentoItens.map(i => ({ produto_id: i.produto_id, quantidade: i.quantidade, valor_unitario: i.valor_unitario }))
+                observacoes: this.formOrcamento.observacoes,
+                desconto: parseFloat(this.formOrcamento.descontos) || 0,
+                mes: this.formOrcamento.dt_criado.split('-')[1],
+                ano: this.formOrcamento.dt_criado.split('-')[0],
+                data_orcamento: this.formOrcamento.dt_criado,
+                data_inicio: this.formOrcamento.dt_inicio,
+                data_fim: this.formOrcamento.dt_fim,
+                itens: this.orcamentoItens.map(i => ({ 
+                    produto_id: i.produto_id, 
+                    quantidade: i.quantidade, 
+                    valor_unitario: i.valor_unitario 
+                }))
             };
             
             try {
@@ -635,13 +829,14 @@ function app() {
                     body: JSON.stringify(payload)
                 });
                 const data = await res.json();
-                if (data.status === 'success') {
+                if (data.id) {
+                    this.showToast('Orçamento criado com sucesso!');
                     this.modal = null;
-                    await this.loadOrcamentos();
+                    this.loadInitialData();
                     this.orcamentoItens = [];
                     this.formOrcamento = { numero_sequencial: '', cliente_id: '', dt_criado: new Date().toISOString().split('T')[0], validade_dias: 30, dt_inicio: '', dt_fim: '', observacoes: '', subtotal: 0, descontos: 0, valor_total: 0 };
                 } else {
-                    alert('Erro ao criar orçamento: ' + (data.message || ''));
+                    this.showToast('Erro ao criar orçamento: ' + (data.message || ''), 'error');
                 }
             } catch (err) {
                 console.error(err);

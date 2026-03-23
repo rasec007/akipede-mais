@@ -1,5 +1,5 @@
 <!-- public/views/orcamentos.php -->
-<section id="aba-orcamentos" x-show="currentTab === 'orcamentos'" x-transition>
+<section id="aba-orcamentos" x-show="currentTab === 'orcamentos'" x-transition x-cloak>
     <div style="margin-bottom: 24px;">
         <h2 class="font-outfit" style="font-size: 2rem; font-weight: 600; color: #000; margin-bottom: 24px;">Orçamentos</h2>
         
@@ -11,7 +11,7 @@
                     <div style="position: absolute; top: 16px; left: 16px; width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center;">
                         <i class="fa-regular fa-clock" style="font-size: 1.2rem;"></i>
                     </div>
-                    <div style="font-size: 3.5rem; font-weight: 600; line-height: 1; text-align: left;" x-text="orcamentos.filter(o => o.status === 'Pendente').length">0</div>
+                    <div style="font-size: 3.5rem; font-weight: 600; line-height: 1; text-align: left;" x-text="orcamentos.filter(o => (o.status || '').toUpperCase() === 'PENDENTE').length">0</div>
                 </div>
                 <div style="padding: 16px 24px; font-size: 1.35rem; font-weight: 500; color: #000;">Pendentes</div>
             </div>
@@ -22,7 +22,7 @@
                     <div style="position: absolute; top: 16px; left: 16px; width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center;">
                         <i class="fa-solid fa-dollar-sign" style="font-size: 1.2rem;"></i>
                     </div>
-                    <div style="font-size: 3.5rem; font-weight: 600; line-height: 1; text-align: left;" x-text="orcamentos.filter(o => o.status === 'Aprovado').length">0</div>
+                    <div style="font-size: 3.5rem; font-weight: 600; line-height: 1; text-align: left;" x-text="orcamentos.filter(o => (o.status || '').toUpperCase() === 'APROVADO').length">0</div>
                 </div>
                 <div style="padding: 16px 24px; font-size: 1.35rem; font-weight: 500; color: #000;">Aprovados</div>
             </div>
@@ -33,7 +33,7 @@
                     <div style="position: absolute; top: 16px; left: 16px; width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center;">
                         <i class="fa-solid fa-ban" style="font-size: 1.2rem;"></i>
                     </div>
-                    <div style="font-size: 3.5rem; font-weight: 600; line-height: 1; text-align: left;" x-text="orcamentos.filter(o => o.status === 'Cancelado').length">0</div>
+                    <div style="font-size: 3.5rem; font-weight: 600; line-height: 1; text-align: left;" x-text="orcamentos.filter(o => (o.status || '').toUpperCase() === 'CANCELADO').length">0</div>
                 </div>
                 <div style="padding: 16px 24px; font-size: 1.35rem; font-weight: 500; color: #000;">Cancelados</div>
             </div>
@@ -111,7 +111,7 @@
                                 <td style="padding: 16px 8px; color: #111;" x-text="'#' + (o.numero_sequencial || '1')"></td>
                                 <td style="padding: 16px 8px; color: #111;" x-text="formatDate(o.dt_criado) || '1/03/2026'"></td>
                                 <td style="padding: 16px 8px; color: #111; text-align: center;" x-text="o.cliente_nome"></td>
-                                <td style="padding: 16px 8px; color: #111; text-align: center;" x-text="user.nome || 'Carlos Cesar Lima'"></td>
+                                <td style="padding: 16px 8px; color: #111; text-align: center;" x-text="o.parceiro_nome || 'Sistema'"></td>
                                 <td style="padding: 16px 24px; color: #111; text-align: right;" x-text="formatMoney(o.valor_total)"></td>
                             </tr>
                         </template>

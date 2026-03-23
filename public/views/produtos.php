@@ -1,5 +1,5 @@
 <!-- public/views/produtos.php -->
-<section id="aba-produtos" x-show="currentTab === 'produtos'" x-transition>
+<section id="aba-produtos" x-show="currentTab === 'produtos'" x-transition x-cloak>
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
         <div style="position: relative; width: 400px;">
             <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 16px; top: 14px; color: var(--secondary-text);"></i>
@@ -29,7 +29,7 @@
                     <template x-for="p in filteredProducts()" :key="p.id_produto">
                         <tr class="product-row">
                             <td style="padding-left: 24px; display: flex; align-items: center;">
-                                <img :src="p.foto || 'https://via.placeholder.com/48'" alt="Prod" style="width: 48px; height: 48px; border-radius: 8px; margin-right: 12px; object-fit: cover;" loading="lazy">
+                                <img :src="p.foto || 'img/placeholder.svg'" onerror="this.src='img/placeholder.svg'" alt="Prod" style="width: 48px; height: 48px; border-radius: 8px; margin-right: 12px; object-fit: cover;" loading="lazy">
                                 <span style="font-weight: 600;" x-text="p.nome"></span>
                             </td>
                             <td style="text-align: center;" x-text="p.categoria_nome || '-'"></td>

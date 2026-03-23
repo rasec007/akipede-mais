@@ -1,5 +1,5 @@
 <!-- public/views/clientes.php -->
-<section id="aba-usuarios" x-show="currentTab === 'usuarios'" x-transition>
+<section id="aba-usuarios" x-show="currentTab === 'usuarios'" x-transition x-cloak>
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
         <div style="position: relative; width: 400px;">
             <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 16px; top: 14px; color: var(--secondary-text);"></i>
@@ -29,7 +29,7 @@
                     <template x-for="c in filteredClientes()" :key="c.id_cliente">
                         <tr class="product-row">
                             <td style="padding-left: 24px; display: flex; align-items: center;">
-                                <img :src="c.foto || 'https://via.placeholder.com/44'" alt="User" style="width: 44px; height: 44px; border-radius: 8px; margin-right: 12px; object-fit: cover;">
+                                <img :src="c.foto || 'img/placeholder.svg'" onerror="this.src='img/placeholder.svg'" alt="User" style="width: 44px; height: 44px; border-radius: 8px; margin-right: 12px; object-fit: cover;">
                                 <span style="font-weight: 600;" x-text="c.nome"></span>
                             </td>
                             <td x-text="c.apelido || '-'"></td>

@@ -1,5 +1,5 @@
 <!-- public/views/loja.php -->
-<section id="aba-loja" x-show="currentTab === 'loja'" x-transition>
+<section id="aba-loja" x-show="currentTab === 'loja'" x-transition x-cloak>
     <div class="card" style="max-width: 800px; border-radius: 8px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
             <h2 class="font-outfit" style="font-size: 1.5rem; font-weight: 700;">Informações da Loja</h2>
@@ -9,7 +9,7 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
             <div style="grid-column: span 2; display: flex; align-items: center; gap: 24px; margin-bottom: 16px;">
                 <div style="width: 100px; height: 100px; border-radius: 8px; overflow: hidden; border: 2px solid var(--line-color);">
-                    <img src="https://divagjstanomoryzlizm.supabase.co/storage/v1/object/public/loja/logo_akipede.png" style="width: 100%; height: 100%; object-fit: contain; background: white;">
+                    <img src="img/1__.png" onerror="this.src='img/logo1__.png'" style="width: 100%; height: 100%; object-fit: contain; background: white;">
                 </div>
                 <button class="btn" style="background: #f1f4f8; color: var(--primary);">Alterar Logo</button>
             </div>

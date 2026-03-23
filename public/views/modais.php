@@ -1,5 +1,5 @@
 <!-- public/views/modais.php -->
-<div x-show="modal" class="modal-overlay" x-transition>
+<div x-show="modal" class="modal-overlay" x-transition x-cloak>
     
     <!-- Modal Cadastrar/Editar Produto (Imagem 06) -->
     <div x-show="modal === 'novo-produto' || modal === 'editar-produto'" class="modal-content" style="max-width: 650px; border-radius: 8px;">
@@ -207,11 +207,18 @@
         </div>
 
         <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 24px;">
-            <div @click="$refs.fileCliente.click()" style="width: 84px; height: 84px; border-radius: 8px; overflow: hidden; border: 3px solid var(--primary); margin-bottom: 8px; cursor: pointer; position: relative;">
-                <img :src="formCliente.foto ? (formCliente.foto.startsWith('http') ? formCliente.foto : 'storage-akipede/usuarios/' + formCliente.foto.split('/').pop()) : 'https://via.placeholder.com/84'" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">
+            <div @click="$refs.fileCliente.click()" style="width: 120px; height: 120px; border: 2px dashed var(--line-color); border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; background: #f4f6fc; overflow: hidden; position: relative;">
+                <template x-if="!formCliente.foto">
+                    <div style="text-align: center;">
+                        <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2rem; color: #95a1ac; margin-bottom: 8px;"></i>
+                        <span style="font-size: 0.75rem; color: #95a1ac; text-align: center; font-weight: 500; display: block;">Upload da Foto</span>
+                    </div>
+                </template>
+                <template x-if="formCliente.foto">
+                    <img :src="formCliente.foto.startsWith('http') ? formCliente.foto : (formCliente.foto.startsWith('storage-akipede') ? formCliente.foto : 'storage-akipede/usuarios/' + formCliente.foto.split('/').pop())" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">
+                </template>
                 <input type="file" x-ref="fileCliente" style="display: none;" @change="uploadFile($event, 'usuarios', 'formCliente')">
             </div>
-            <button @click="$refs.fileCliente.click()" class="btn" style="background: transparent; color: var(--primary); font-size: 0.85rem; font-weight: 600;">Alterar Foto</button>
         </div>
 
         <div class="form-group">
@@ -220,19 +227,51 @@
         </div>
 
         <div class="form-group">
+            <input type="text" id="cli-cpf" class="form-control" placeholder="CPF/CNPJ (Opcional)" x-model="formCliente.cpf">
+            <label for="cli-cpf" class="form-label">CPF/CNPJ</label>
+        </div>
+
+        <div class="form-group">
             <input type="email" id="cli-email" class="form-control" placeholder="E-mail" x-model="formCliente.email" required>
             <label for="cli-email" class="form-label">E-mail</label>
         </div>
 
         <div class="form-group">
-            <input type="password" id="cli-senha" class="form-control" placeholder="Senha" required>
+            <input type="text" id="cli-fone" class="form-control" placeholder="Celular (Apenas números)" x-model="formCliente.fone" @input="formCliente.fone = maskPhone($event.target.value)" maxlength="15" required>
+            <label for="cli-fone" class="form-label">Celular</label>
+        </div>
+
+        <div class="form-group">
+            <input type="text" id="cli-logradouro" class="form-control" placeholder="Pesquise o endereço..." x-model="formCliente.logradouro" x-init="mountGooglePlaces($el)">
+            <label for="cli-logradouro" class="form-label">Endereço</label>
+        </div>
+
+        <div style="display: flex; gap: 16px;">
+            <div class="form-group" style="flex: 1;">
+                <input type="text" id="cli-num" class="form-control" placeholder="Nº" x-model="formCliente.num">
+                <label for="cli-num" class="form-label">Número</label>
+            </div>
+            <div class="form-group" style="flex: 2;">
+                <input type="text" id="cli-complemento" class="form-control" placeholder="Apto, Bloco..." x-model="formCliente.complemento">
+                <label for="cli-complemento" class="form-label">Complemento</label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <input type="password" id="cli-senha" class="form-control" placeholder="Senha" x-model="formCliente.senha" :required="modal === 'novo-cliente'">
             <label for="cli-senha" class="form-label">Senha</label>
+        </div>
+
+        <div class="form-group">
+            <input type="text" id="cli-obs" class="form-control" placeholder="Observações extras (Opcional)" x-model="formCliente.obs">
+            <label for="cli-obs" class="form-label">Observação</label>
         </div>
 
         <div class="form-group">
             <select id="cli-perfil" x-model="formCliente.perfil" class="form-control" style="padding-top: 24px;">
                 <option value="Usuário">Usuário</option>
                 <option value="Admin">Administrador</option>
+                <option value="Parceiro">Parceiro</option>
             </select>
             <label for="cli-perfil" class="form-label" style="top: -10px; left: 12px; font-size: 0.75rem; font-weight: 700; color: var(--primary); background: white; padding: 0 6px; border-radius: 4px;">Perfil</label>
         </div>
@@ -243,116 +282,168 @@
         </div>
     </div>
     <!-- Modal Excluir Produto (NOVO) -->
-    <div class="modal-overlay" x-show="modal === 'excluir-produto'" x-transition style="z-index: 10001;">
-        <div class="modal-content" @click.away="modal = null" style="max-width: 450px; text-align: center;">
-            <div style="margin-bottom: 24px;">
-                <div style="width: 80px; height: 80px; background: rgba(226, 28, 61, 0.1); color: var(--error); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 2rem;">
-                    <i class="fa-solid fa-trash-can"></i>
-                </div>
-                <h2 class="font-outfit" style="font-size: 1.5rem; margin-bottom: 8px;">Excluir Produto?</h2>
-                <p style="color: var(--secondary-text); font-size: 0.95rem;">Você está prestes a remover este produto definitivamente do seu catálogo.</p>
+    <div x-show="modal === 'excluir-produto'" class="modal-content" style="max-width: 450px; text-align: center; border-radius: 8px;">
+        <div style="margin-bottom: 24px;">
+            <div style="width: 80px; height: 80px; background: rgba(226, 28, 61, 0.1); color: var(--error); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 2rem;">
+                <i class="fa-solid fa-trash-can"></i>
             </div>
+            <h2 class="font-outfit" style="font-size: 1.5rem; margin-bottom: 8px;">Excluir Produto?</h2>
+            <p style="color: var(--secondary-text); font-size: 0.95rem;">Você está prestes a remover este produto definitivamente do seu catálogo.</p>
+        </div>
 
-            <div style="background: #f1f4f8; border-radius: 12px; padding: 16px; margin-bottom: 24px; display: flex; align-items: center; text-align: left;">
-                <img :src="productToDelete.foto || 'https://via.placeholder.com/60'" style="width: 60px; height: 60px; border-radius: 8px; object-fit: cover; margin-right: 16px;">
-                <div style="flex: 1; overflow: hidden;">
-                    <p style="font-weight: 700; color: var(--primary-text); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;" x-text="productToDelete.nome"></p>
-                    <p style="font-size: 0.85rem; color: var(--secondary-text);" x-text="formatMoney(productToDelete.valor_venda)"></p>
-                </div>
+        <div style="background: #f1f4f8; border-radius: 12px; padding: 16px; margin-bottom: 24px; display: flex; align-items: center; text-align: left;">
+            <img :src="(productToDelete?.foto) || 'img/placeholder.svg'" style="width: 60px; height: 60px; border-radius: 8px; object-fit: cover; margin-right: 16px;">
+            <div style="flex: 1; overflow: hidden;">
+                <p style="font-weight: 700; color: var(--primary-text); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;" x-text="productToDelete?.nome || ''"></p>
+                <p style="font-size: 0.85rem; color: var(--secondary-text);" x-text="formatMoney(productToDelete?.valor_venda)"></p>
             </div>
+        </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                <button @click="modal = null" class="btn" style="background: #e0e3e7; color: var(--primary-text);">Cancelar</button>
-                <button @click="confirmDeleteProduct()" class="btn btn-error">Excluir Agora</button>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <button @click="modal = null" class="btn" style="background: #e0e3e7; color: var(--primary-text);">Cancelar</button>
+            <button @click="confirmDeleteProduct()" class="btn btn-error">Excluir Agora</button>
+        </div>
+    </div>
+
+    <!-- Modal Excluir Cliente (NOVO) -->
+    <div x-show="modal === 'excluir-cliente'" class="modal-content" style="max-width: 450px; text-align: center; border-radius: 8px;">
+        <div style="margin-bottom: 24px;">
+            <div style="width: 80px; height: 80px; background: rgba(226, 28, 61, 0.1); color: var(--error); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 2rem;">
+                <i class="fa-solid fa-user-xmark"></i>
             </div>
+            <h2 class="font-outfit" style="font-size: 1.5rem; margin-bottom: 8px;">Excluir Usuário?</h2>
+            <p style="color: var(--secondary-text); font-size: 0.95rem;">Você está prestes a remover este usuário definitivamente.</p>
+        </div>
+
+        <div style="background: #f1f4f8; border-radius: 12px; padding: 16px; margin-bottom: 24px; display: flex; align-items: center; text-align: left;">
+            <img :src="(clienteToDelete?.foto) ? (clienteToDelete.foto.startsWith('http') ? clienteToDelete.foto : 'storage-akipede/usuarios/' + clienteToDelete.foto.split('/').pop()) : 'img/placeholder.svg'" style="width: 60px; height: 60px; border-radius: 8px; object-fit: cover; margin-right: 16px;">
+            <div style="flex: 1; overflow: hidden;">
+                <p style="font-weight: 700; color: var(--primary-text); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;" x-text="clienteToDelete?.nome || ''"></p>
+                <p style="font-size: 0.85rem; color: var(--secondary-text);" x-text="clienteToDelete?.email || ''"></p>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <button @click="modal = null" class="btn" style="background: #e0e3e7; color: var(--primary-text);">Cancelar</button>
+            <button @click="confirmDeleteCliente()" class="btn btn-error">Excluir Agora</button>
         </div>
     </div>
 </div>
 
 <!-- Modal Novo Orçamento -->
-<div class="modal-overlay" x-show="modal === 'novo-orcamento'" x-transition style="z-index: 10001;">
-    <div class="modal-content" @click.away="modal = null" style="max-width: 850px;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+<div class="modal-overlay" x-show="modal === 'novo-orcamento'" x-transition style="z-index: 10001;" x-cloak>
+    <div class="modal-content" @click.away="modal = null" style="max-width: 850px; border-radius: 12px; padding: 0; border: none; overflow: hidden;">
+        <div style="background-color: #f9fafb; padding: 24px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: flex-start;">
             <div>
-                <h2 style="font-size: 1.5rem; color: #111; margin-bottom: 4px;">Cadastrar novo orçamento</h2>
-                <p style="color: #6b7280; font-size: 0.95rem;">Insira as informações do seu orçamento nos campos abaixo.</p>
+                <h2 style="font-size: 1.5rem; color: #111; margin-bottom: 4px; font-weight: 600;">Cadastrar novo orçamento</h2>
+                <p style="color: #6b7280; font-size: 0.95rem;">Preencha os dados abaixo para gerar o orçamento.</p>
             </div>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 80px 1fr; gap: 16px; margin-bottom: 16px;">
-            <input type="text" x-model="formOrcamento.numero_sequencial" placeholder="Nº 3" class="form-control" style="background: white;">
-            <input type="text" disabled value="Carlos Cesar Lima" class="form-control" style="background: white;">
-        </div>
-
-        <div style="display: flex; gap: 16px; margin-bottom: 16px;">
-            <select x-model="formOrcamento.cliente_id" class="form-control" style="flex: 1; background: white;">
-                <option value="">Selecione o Cliente</option>
-                <template x-for="c in clientes" :key="c.id_cliente">
-                    <option :value="c.id_cliente" x-text="c.nome"></option>
-                </template>
-            </select>
-            <button class="btn" style="background: transparent; border: 1px solid var(--line-color); padding: 0 16px; border-radius: 8px;">
-                <i class="fa-solid fa-plus" style="font-size: 1.4rem; color: #111;"></i>
+            <button @click="modal = null" style="background: #e5e7eb; border: none; cursor: pointer; color: #374151; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
 
-        <div style="display: flex; gap: 32px; align-items: center; margin-bottom: 16px; font-size: 0.95rem; color: #374151;">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <span>Data de criação:</span>
-                <span x-text="formOrcamento.dt_criado.split('-').reverse().join('/')"></span>
-                <i class="fa-solid fa-calendar-days" style="color: #26b1cb; font-size: 1.4rem;"></i>
+        <div style="padding: 32px;">
+            <!-- Primeira Linha: Nº e Parceiro -->
+            <div style="display: grid; grid-template-columns: 150px 1fr; gap: 20px; margin-bottom: 20px;">
+                <div class="form-group-custom">
+                    <label>Nº Orçamento</label>
+                    <input type="text" x-model="formOrcamento.numero_sequencial" class="form-control" style="background: #f3f4f6; color: #6b7280;" readonly>
+                </div>
+                <div class="form-group-custom">
+                    <label>Parceiro / Vendedor</label>
+                    <input type="text" :value="formOrcamento.parceiro_nome" class="form-control" style="background: #f3f4f6; color: #6b7280;" readonly>
+                </div>
             </div>
-        </div>
-        
-        <div style="display: flex; gap: 24px; align-items: center; margin-bottom: 24px; font-size: 0.95rem; color: #374151;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <span>Validade do orçamento,</span>
-                <input type="number" x-model="formOrcamento.validade_dias" style="width: 40px; border: none; border-bottom: 1px solid #ccc; text-align: center; outline: none;">
-                <span>dias:</span>
-                <span style="font-weight: 500;">10/04/2026</span>
+
+            <!-- Segunda Linha: Cliente -->
+            <div style="display: flex; gap: 16px; align-items: flex-end; margin-bottom: 20px;">
+                <div class="form-group-custom" style="flex: 1;">
+                    <label>Cliente</label>
+                    <select x-model="formOrcamento.cliente_id" class="form-control" style="background: white;">
+                        <option value="">Selecione o Cliente</option>
+                        <template x-for="c in clientes" :key="c.id_cliente">
+                            <option :value="c.id_cliente" x-text="c.nome"></option>
+                        </template>
+                    </select>
+                </div>
+                <button @click="openModal('novo-cliente')" class="btn" style="background: #f3f4f6; border: 1px solid #d1d5db; height: 45px; width: 45px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 8px;">
+                    <i class="fa-solid fa-user-plus" style="color: #374151;"></i>
+                </button>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <i class="fa-solid fa-calendar-days" style="color: #26b1cb; font-size: 1.2rem;"></i> Data Início: 
-                <input type="datetime-local" x-model="formOrcamento.dt_inicio" style="border:none; outline:none; font-family:inherit;">
+
+            <!-- Terceira Linha: Data Criação e Validade -->
+            <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 20px; margin-bottom: 20px;">
+                <div class="form-group-custom">
+                    <label>Data de Criação</label>
+                    <div style="position: relative;">
+                        <input type="date" x-model="formOrcamento.dt_criado" class="form-control" @input="calculateValidade()" style="padding-right: 40px;">
+                        <i class="fa-solid fa-calendar-day" style="position: absolute; right: 12px; top: 14px; color: #26b1cb;"></i>
+                    </div>
+                </div>
+                <div class="form-group-custom">
+                    <label>Validade do orçamento (dias)</label>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <input type="number" x-model="formOrcamento.validade_dias" class="form-control" style="width: 100px;" @input="calculateValidade()">
+                        <span style="color: #374151; font-weight: 600; font-size: 0.95rem;">
+                            Expira em: <span x-text="formOrcamento.validade ? formOrcamento.validade.split('-').reverse().join('/') : '-'" style="color: #fb5153;"></span>
+                        </span>
+                    </div>
+                </div>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <i class="fa-solid fa-calendar-days" style="color: #26b1cb; font-size: 1.2rem;"></i> Data Fim: 
-                <input type="datetime-local" x-model="formOrcamento.dt_fim" style="border:none; outline:none; font-family:inherit;">
+            
+            <!-- Quarta Linha: Início e Fim -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 32px;">
+                <div class="form-group-custom">
+                    <label>Data Início</label>
+                    <input type="datetime-local" x-model="formOrcamento.dt_inicio" class="form-control" @input.debounce.500ms="fetchDisponibilidade()">
+                </div>
+                <div class="form-group-custom">
+                    <label>Data Fim</label>
+                    <input type="datetime-local" x-model="formOrcamento.dt_fim" class="form-control" @input.debounce.500ms="fetchDisponibilidade()">
+                </div>
             </div>
-        </div>
 
         <h3 style="text-align: center; font-size: 1.3rem; margin-bottom: 16px; color: #111; font-weight: 500;">Itens do Orçamento</h3>
         
-        <div style="display: flex; gap: 16px; align-items: center; margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--line-color);">
-            <select x-model="novoItemOrcamento.produto_id" class="form-control" style="flex: 2; height: 45px; background: white;" @change="updateNovoItemValor()">
-                <option value="">Selecione Produto</option>
-                <template x-for="p in produtos" :key="p.id_produto">
-                    <option :value="p.id_produto" x-text="p.nome"></option>
-                </template>
-            </select>
-            <i class="fa-solid fa-calendar-days" style="font-size: 1.6rem; cursor: pointer;"></i>
+        <div style="display: flex; gap: 16px; align-items: flex-end; margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--line-color);">
+            <div class="form-group-custom" style="flex: 2;">
+                <label>Produto</label>
+                <select x-model="novoItemOrcamento.produto_id" class="form-control" style="height: 45px; background: white; padding: 0 12px;" @change="updateNovoItemValor()">
+                    <option value="">Selecione Produto</option>
+                    <template x-for="p in produtos" :key="p.id_produto">
+                        <option :value="p.id_produto" x-text="p.nome"></option>
+                    </template>
+                </select>
+            </div>
+
+            <i class="fa-solid fa-calendar-days" style="font-size: 1.6rem; cursor: pointer; color: #26b1cb; margin-bottom: 10px;" @click="fetchDisponibilidade()"></i>
             
-            <div style="text-align: center; font-size: 0.85rem; line-height: 1.2;">
-                <span style="color: #6b7280;">Qtd. Prevista</span><br>
-                <span style="font-weight: 600; font-size: 0.95rem;">-</span>
+            <div style="text-align: center; font-size: 0.85rem; line-height: 1.2; margin-bottom: 10px;">
+                <span style="color: #6b7280; font-weight: 600; text-transform: uppercase; font-size: 0.75rem;">Qtd. Prevista</span><br>
+                <span style="font-weight: 600; font-size: 1rem; color: #111;" x-text="novoItemOrcamento.qtd_prevista"></span>
             </div>
             
-            <div style="display: flex; align-items: center; gap: 12px; font-size: 1.1rem;">
-                <i class="fa-solid fa-minus" style="color: #ef4444; cursor: pointer;" @click="if(novoItemOrcamento.quantidade > 1) novoItemOrcamento.quantidade--"></i>
-                <span style="font-weight: 600;" x-text="novoItemOrcamento.quantidade"></span>
-                <i class="fa-solid fa-plus" style="color: #26b1cb; cursor: pointer;" @click="novoItemOrcamento.quantidade++"></i>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 4px;">
+                <label style="font-size: 0.75rem; font-weight: 600; color: #4b5563; text-transform: uppercase;">Qtd.</label>
+                <div style="display: flex; align-items: center; gap: 12px; font-size: 1.1rem; border: 1px solid #dbe2e7; padding: 8px 12px; border-radius: 8px;">
+                    <i class="fa-solid fa-minus" style="color: #ef4444; cursor: pointer;" @click="if(novoItemOrcamento.quantidade > 1) novoItemOrcamento.quantidade--"></i>
+                    <span style="font-weight: 600; min-width: 20px; text-align: center;" x-text="novoItemOrcamento.quantidade"></span>
+                    <i class="fa-solid fa-plus" style="color: #26b1cb; cursor: pointer;" @click="const p = produtos.find(pr => pr.id_produto === novoItemOrcamento.produto_id); if(p && novoItemOrcamento.quantidade < (parseInt(p.qtd_atual) || 9999)) novoItemOrcamento.quantidade++; else if(!p) novoItemOrcamento.quantidade++"></i>
+                </div>
             </div>
             
-            <div style="text-align: right; font-size: 0.85rem; line-height: 1.2; min-width: 100px;">
-                <span style="color: #6b7280;">Valor do Unit.</span><br>
-                <span style="font-weight: 500; font-size: 0.95rem;" x-text="formatMoney(novoItemOrcamento.valor_unit) || 'R$ 0,00'"></span>
+            <div style="text-align: right; font-size: 0.85rem; line-height: 1.2; min-width: 100px; margin-bottom: 10px;">
+                <span style="color: #6b7280; font-weight: 600; text-transform: uppercase; font-size: 0.75rem;">Valor Unit.</span><br>
+                <span style="font-weight: 600; font-size: 1rem; color: #111;" x-text="formatMoney(novoItemOrcamento.valor_unitario)"></span>
             </div>
-            <div style="text-align: right; font-size: 0.85rem; line-height: 1.2; min-width: 100px;">
-                <span style="color: #6b7280;">Valor Total</span><br>
-                <span style="font-weight: 500; font-size: 0.95rem;" x-text="formatMoney(novoItemOrcamento.valor_unit * novoItemOrcamento.quantidade) || 'R$ 0,00'"></span>
+
+            <div style="text-align: right; font-size: 0.85rem; line-height: 1.2; min-width: 100px; margin-bottom: 10px;">
+                <span style="color: #6b7280; font-weight: 600; text-transform: uppercase; font-size: 0.75rem;">Valor Total</span><br>
+                <span style="font-weight: 600; font-size: 1rem; color: #111;" x-text="formatMoney(novoItemOrcamento.quantidade * novoItemOrcamento.valor_unitario)"></span>
             </div>
             
-            <i class="fa-solid fa-circle-plus" style="color: #26b1cb; font-size: 1.8rem; cursor: pointer; margin-left: 12px;" @click="addItemOrcamento()"></i>
+            <i class="fa-solid fa-circle-plus" style="color: #26b1cb; font-size: 2.2rem; cursor: pointer; margin-left: 12px; margin-bottom: 5px;" @click="addItemOrcamento()"></i>
         </div>
 
         <div style="border: 1px solid var(--line-color); border-radius: 8px; overflow: hidden; margin-bottom: 24px;">
@@ -394,8 +485,8 @@
                     <span x-text="formatMoney(formOrcamento.subtotal)"></span>
                 </div>
                 <div style="display: flex; justify-content: space-between; margin-bottom: 16px; font-weight: 500; font-size: 0.95rem; color: #111;">
-                    <span>Descontos:</span>
-                    <input type="number" x-model="formOrcamento.descontos" style="width: 80px; text-align: right; border: none; border-bottom: 1px solid var(--line-color); outline: none; font-weight: 500;" @input="calculateOrcamentoTotal()">
+                    <span>Desconto:</span>
+                    <input type="text" x-model="formOrcamento.descontos_display" @input="applyDiscountMask($event.target.value)" style="width: 120px; text-align: right; border: none; border-bottom: 1px solid var(--line-color); outline: none; font-weight: 500; font-size: 1.1rem; color: #ef4444;" placeholder="R$ 0,00">
                 </div>
                 <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 1.25rem; color: #111;">
                     <span>Total Geral:</span>
@@ -417,10 +508,25 @@
         position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
         background: rgba(16, 18, 19, 0.45);
         backdrop-filter: blur(4px); 
-        display: flex; align-items: center; justify-content: center; z-index: 2000; 
+        display: flex; align-items: flex-start; justify-content: center; z-index: 2000; 
+        overflow-y: auto;
+        padding: 30px 0;
     }
     .modal-content { 
-        background: white; padding: 32px; width: 95%; max-height: 90vh; overflow-y: auto;
+        background: white; padding: 0; width: 95%; max-height: none;
         box-shadow: 0 10px 30px rgba(0,0,0,0.15); 
+        margin-bottom: 30px;
+    }
+    .form-group-custom {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .form-group-custom label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #4b5563;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
     }
 </style>

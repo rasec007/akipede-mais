@@ -102,9 +102,13 @@ switch($resource) {
         require_once __DIR__ . '/controllers/OrcamentoController.php';
         $controller = new OrcamentoController((new Database())->getConnection());
         if ($request_method == 'GET') {
-            echo json_encode($controller->read());
+            $loja_id = $_GET['loja_id'] ?? ($_SESSION['user']['loja_id'] ?? null);
+            echo json_encode($controller->read($loja_id));
         } elseif ($request_method == 'POST') {
             $data = json_decode(file_get_contents("php://input"), true);
+            if (isset($_SESSION['user']['loja_id'])) {
+                $data['loja'] = $_SESSION['user']['loja_id'];
+            }
             $id = $controller->create($data);
             if ($id) {
                 http_response_code(201); echo json_encode(["message" => "Orçamento criado", "id" => $id]);
@@ -113,24 +117,66 @@ switch($resource) {
             }
         }
         break;
+
+    case 'disponibilidade':
+        require_once __DIR__ . '/controllers/OrcamentoController.php';
+        $controller = new OrcamentoController((new Database())->getConnection());
+        if ($request_method == 'GET') {
+            $produto_id = $_GET['produto_id'] ?? null;
+            $inicio = $_GET['inicio'] ?? null;
+            $fim = $_GET['fim'] ?? null;
+            if ($produto_id && $inicio && $fim) {
+                $resultado = $controller->getDisponibilidade($produto_id, $inicio, $fim);
+                echo json_encode(["status" => "success", "qtd_prevista" => $resultado]);
+            } else {
+                http_response_code(400); echo json_encode(["message" => "Parâmetros faltando"]);
+            }
+        }
+        break;
     case 'pedidos':
         require_once __DIR__ . '/controllers/PedidoController.php';
         $controller = new PedidoController((new Database())->getConnection());
         if ($request_method == 'GET') {
-            echo json_encode($controller->read());
+            $loja_id = $_GET['loja_id'] ?? ($_SESSION['user']['loja_id'] ?? null);
+            echo json_encode($controller->read($loja_id));
         }
         break;
     case 'clientes':
         require_once __DIR__ . '/controllers/ClienteController.php';
         $controller = new ClienteController((new Database())->getConnection());
         if ($request_method == 'GET') {
-            echo json_encode($controller->read());
+            $loja_id = $_GET['loja_id'] ?? ($_SESSION['user']['loja_id'] ?? null);
+            echo json_encode($controller->read($loja_id));
         } elseif ($request_method == 'POST') {
             $data = json_decode(file_get_contents("php://input"), true);
+            if (isset($_SESSION['user']['loja_id'])) {
+                $data['loja'] = $_SESSION['user']['loja_id'];
+            }
             if ($controller->create($data)) {
                 echo json_encode(["message" => "Cliente criado"]);
             } else {
-                http_response_code(500); echo json_encode(["message" => "Erro ao criar cliente"]);
+                http_response_code(500); 
+                echo json_encode(["message" => "Erro ao criar cliente", "error" => $controller->getLastError()]);
+            }
+        } elseif ($request_method == 'PUT') {
+            $id = $_GET['id'] ?? null;
+            $data = json_decode(file_get_contents("php://input"), true);
+            if (isset($_SESSION['user']['loja_id'])) {
+                $data['loja'] = $_SESSION['user']['loja_id'];
+            }
+            if ($id && $controller->update($id, $data)) {
+                echo json_encode(["message" => "Cliente atualizado"]);
+            } else {
+                http_response_code(500); 
+                echo json_encode(["message" => "Erro ao atualizar cliente", "error" => $controller->getLastError()]);
+            }
+        } elseif ($request_method == 'DELETE') {
+            $id = $_GET['id'] ?? null;
+            if ($id && $controller->delete($id)) {
+                echo json_encode(["message" => "Cliente excluído"]);
+            } else {
+                http_response_code(500); 
+                echo json_encode(["message" => "Erro ao excluir cliente", "error" => $controller->getLastError()]);
             }
         }
         break;
@@ -176,6 +222,17 @@ switch($resource) {
         $id = $_GET['id'] ?? null;
         if ($id) {
             echo json_encode($controller->getById($id));
+        }
+        break;
+    case 'dashboard-stats':
+        require_once __DIR__ . '/controllers/StatsController.php';
+        $controller = new StatsController((new Database())->getConnection());
+        $loja_id = $_GET['loja_id'] ?? ($_SESSION['user']['loja_id'] ?? null);
+        if ($loja_id) {
+            echo json_encode($controller->getDashboardStats($loja_id));
+        } else {
+            http_response_code(400);
+            echo json_encode(["message" => "loja_id não fornecido"]);
         }
         break;
     case 'agenda':
