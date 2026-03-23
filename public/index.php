@@ -339,7 +339,8 @@ $loggedUser = getLoggedUser();
     </div>
 
     <!-- Google Maps Places API -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDgiuDZTfivdsfbBCL1A0k0MP4nihQv4nk&libraries=places&loading=async" async defer></script>
+    <?php $gmaps_key = getenv('GMAPS_KEY') ?: 'AIzaSyDgiuDZTfivdsfbBCL1A0k0MP4nihQv4nk'; ?>
+    <script src="https://maps.googleapis.com/maps/api/js?key=<?= $gmaps_key ?>&libraries=places&loading=async" async defer></script>
     <!-- Alpine.js Plugins -->
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/mask@3.x.x/dist/cdn.min.js"></script>
     <!-- Alpine.js Core (DEVE vir após os plugins) -->

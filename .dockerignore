@@ -1,0 +1,12 @@
+.git
+.gitattributes
+.gitignore
+.dockerignore
+Dockerfile
+*.md
+.gemini
+tests/
+scripts/*.php
+!scripts/migrate_*.php
+inspiracao/
+node_modules/
