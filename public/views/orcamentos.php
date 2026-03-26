@@ -106,11 +106,11 @@
                                 <td style="padding: 16px 24px; display: flex; gap: 8px; font-size: 1.3rem; align-items: center;">
                                     <i class="fa-solid fa-pen" style="color: #26b1cb; cursor: pointer; font-size: calc(1.3rem + 5px);" @click="editOrcamento(o)"></i>
                                     <i class="fa-solid fa-trash-can" style="color: #ee436b; cursor: pointer; font-size: calc(1.3rem + 5px);" @click="deleteOrcamento(o)"></i>
-                                    <i class="fa-solid fa-square-check" style="color: #1e3a8a; cursor: pointer; font-size: calc(1.3rem + 5px);"></i>
+                                    <i class="fa-solid fa-square-check" style="color: #1e3a8a; cursor: pointer; font-size: calc(1.3rem + 5px);" @click="approveOrcamento(o)" title="Aprovar"></i>
                                 </td>
                                 <td style="padding: 16px 8px; color: #111;" x-text="'#' + (o.numero_sequencial || '1')"></td>
                                 <td style="padding: 16px 8px; color: #111;" x-text="formatDate(o.dt_criado) || '1/03/2026'"></td>
-                                <td style="padding: 16px 8px; color: #111; text-align: center;" x-text="o.cliente_nome"></td>
+                                <td style="padding: 16px 8px; color: #111; text-align: center;" x-text="getClientName(o.cliente_nome)"></td>
                                 <td style="padding: 16px 8px; color: #111; text-align: center;" x-text="o.parceiro_nome || 'Sistema'"></td>
                                 <td style="padding: 16px 24px; color: #111; text-align: right;" x-text="formatMoney(o.valor_total)"></td>
                             </tr>

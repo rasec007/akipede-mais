@@ -2,7 +2,7 @@
 <div x-show="modal" class="modal-overlay" x-transition x-cloak>
     
     <!-- Modal Cadastrar/Editar Produto (Imagem 06) -->
-    <div x-show="modal === 'novo-produto' || modal === 'editar-produto'" class="modal-content" style="max-width: 650px; border-radius: 8px;">
+    <div x-show="modal === 'novo-produto' || modal === 'editar-produto'" class="modal-content" style="max-width: 650px; border-radius: 8px; padding: 16px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
             <h2 class="font-outfit" style="font-size: 1.5rem; font-weight: 700;" x-text="modal === 'novo-produto' ? 'Cadastrar Produto' : 'Atualizar Produto'"></h2>
             <button @click="modal = null" style="background: none; border: none; font-size: 1.75rem; cursor: pointer; color: var(--secondary-text);">&times;</button>
@@ -88,7 +88,7 @@
     </div>
 
     <!-- Modal Nova Categoria (Pop-up inspirado imagem 06.1) -->
-    <div x-show="modal === 'novo-categoria'" class="modal-content" style="max-width: 400px; border-radius: 12px; padding: 32px;">
+    <div x-show="modal === 'novo-categoria'" class="modal-content" style="max-width: 400px; border-radius: 12px; padding: 16px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
             <h2 class="font-outfit" style="font-size: 1.25rem; font-weight: 700; color: var(--primary-text);">Nova Categoria</h2>
             <button @click="modal = 'novo-produto'" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--secondary-text);">&times;</button>
@@ -107,7 +107,7 @@
 
     <!-- Modal Confirmar Logout -->
     <div class="modal-overlay" x-show="modal === 'confirmar-logout'" x-transition style="z-index: 10001;">
-        <div class="modal-content" @click.away="modal = null" style="max-width: 400px; border-radius: 12px; padding: 32px; text-align: center;">
+        <div class="modal-content" @click.away="modal = null" style="max-width: 400px; border-radius: 12px; padding: 16px; text-align: center;">
             <div style="margin-bottom: 24px;">
                 <div style="width: 80px; height: 80px; background: rgba(226, 28, 61, 0.1); color: var(--error); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 2rem;">
                     <i class="fa-solid fa-right-from-bracket"></i>
@@ -125,7 +125,7 @@
 
     <!-- [Resto dos modais permanecem iguais...] -->
     <!-- Modal Agendamento (Imagem 08) -->
-    <div x-show="modal === 'agendamento'" class="modal-content" style="max-width: 800px; border-radius: 12px; padding: 32px;">
+    <div x-show="modal === 'agendamento'" class="modal-content" style="max-width: 800px; border-radius: 12px; padding: 16px;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
             <div>
                 <h2 class="font-outfit" style="font-size: 1.5rem; font-weight: 400; color: #000;">Agenda do produto: <span x-text="formAgendamento.nome || 'Hot'"></span></h2>
@@ -169,7 +169,7 @@
                     >
                         <span x-text="dObj.day || ''"></span>
                         <div x-show="dObj.totalQtd > 0" 
-                             style="position: absolute; top: -4px; right: -4px; background-color: var(--primary); color: #fff; font-size: 0.65rem; font-weight: bold; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #fff;"
+                             style="position: absolute; top: -4px; right: -4px; background-color: var(--primary); color: #000; font-size: 0.75rem; font-weight: 900; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #fff;"
                              x-text="dObj.totalQtd"></div>
                     </div>
                 </template>
@@ -178,11 +178,15 @@
             <!-- Detail Box -->
             <div style="margin-top: 16px;">
                 <!-- Lista de Agendamentos do dia selecionado -->
-                <template x-for="ag in formAgendamento.selectedDayAgendamentos" :key="ag.id_agenda_produto">
+                <template x-for="(ag, index) in formAgendamento.selectedDayAgendamentos" :key="index">
                     <div style="border: 1px solid #c4c4c4; border-radius: 8px; padding: 16px; background: #fff; margin-bottom: 8px;">
+                        <p style="font-size: 1rem; color: #222; margin-bottom: 6px; font-weight: 600;">Nº orçamento: <span style="font-weight: 400;">#<span x-text="ag.numero_sequencial || 'N/A'"></span></span></p>
+                        <p style="font-size: 1rem; color: #222; margin-bottom: 6px;">Parceiro: <span x-text="ag.parceiro || 'Não informado'"></span></p>
                         <p style="font-size: 1rem; color: #222; margin-bottom: 6px;">Cliente: <span x-text="ag.cliente_nome || 'Desconhecido'"></span></p>
-                        <p style="font-size: 1rem; color: #222; margin-bottom: 6px;">Qtd: <span x-text="ag.quantidade || '1'"></span></p>
-                        <p style="font-size: 1rem; color: #222; margin-bottom: 6px;">Nº orçamento: #<span x-text="ag.orcamento ? ag.orcamento.split('-')[0] : 'N/A'"></span></p>
+                        <div style="display: flex; gap: 32px; margin-top: 6px; margin-bottom: 6px;">
+                            <p style="font-size: 1rem; color: #222;">Qtd: <span style="font-weight: 600;" x-text="ag.quantidade || '1'"></span></p>
+                            <p style="font-size: 1rem; color: #222;">Total: <span style="font-weight: 600; color: #26b1cb;" x-text="formatMoney(ag.valor_total || 0)"></span></p>
+                        </div>
                         <div style="display: flex; gap: 32px; margin-top: 6px;">
                             <p style="font-size: 1rem; color: #222;">Data Início: <span x-text="formatDateTimeRange(ag.data_inicio)"></span></p>
                             <p style="font-size: 1rem; color: #222;">Data Fim: <span x-text="formatDateTimeRange(ag.data_fim)"></span></p>
@@ -200,10 +204,10 @@
     </div>
 
     <!-- Modal Cadastrar/Editar Cliente/Usuário (Imagem 10) -->
-    <div x-show="modal === 'novo-cliente' || modal === 'editar-cliente'" class="modal-content" style="max-width: 500px; border-radius: 8px;">
+    <div x-show="modal === 'novo-cliente' || modal === 'editar-cliente'" class="modal-content" style="max-width: 500px; border-radius: 8px; padding: 16px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
             <h2 class="font-outfit" style="font-size: 1.5rem; font-weight: 700;" x-text="modal === 'novo-cliente' ? 'Cadastrar Usuário' : 'Atualizar Usuário'"></h2>
-            <button @click="modal = null" style="background: none; border: none; font-size: 1.75rem; cursor: pointer; color: var(--secondary-text);">&times;</button>
+            <button @click="modal = null" :disabled="isSavingCliente" style="background: none; border: none; font-size: 1.75rem; cursor: pointer; color: var(--secondary-text);">&times;</button>
         </div>
 
         <div style="display: flex; flex-direction: column; align-items: center; margin-bottom: 24px;">
@@ -227,8 +231,8 @@
         </div>
 
         <div class="form-group">
-            <input type="text" id="cli-cpf" class="form-control" placeholder="CPF/CNPJ (Opcional)" x-model="formCliente.cpf">
-            <label for="cli-cpf" class="form-label">CPF/CNPJ</label>
+            <input type="text" id="cli-cpf" class="form-control" placeholder="CPF" x-model="formCliente.cpf" x-mask="999.999.999-99" required>
+            <label for="cli-cpf" class="form-label">CPF</label>
         </div>
 
         <div class="form-group">
@@ -263,13 +267,18 @@
         </div>
 
         <div class="form-group">
-            <input type="text" id="cli-obs" class="form-control" placeholder="Observações extras (Opcional)" x-model="formCliente.obs">
+            <input type="password" id="cli-senha-confirma" class="form-control" placeholder="Confirmar Senha" x-model="formCliente.senha_confirma" :required="modal === 'novo-cliente'">
+            <label for="cli-senha-confirma" class="form-label">Confirmar Senha</label>
+        </div>
+
+        <div class="form-group">
+            <textarea id="cli-obs" class="form-control" placeholder="Observações extras (Opcional)" x-model="formCliente.obs" rows="2" style="resize: none;"></textarea>
             <label for="cli-obs" class="form-label">Observação</label>
         </div>
 
         <div class="form-group">
-            <select id="cli-perfil" x-model="formCliente.perfil" class="form-control" style="padding-top: 24px;">
-                <option value="Usuário">Usuário</option>
+            <select id="cli-perfil" x-model="formCliente.perfil" class="form-control" style="padding-top: 24px;" required>
+                <option value="Cliente">Cliente</option>
                 <option value="Admin">Administrador</option>
                 <option value="Parceiro">Parceiro</option>
             </select>
@@ -277,12 +286,15 @@
         </div>
 
         <div style="display: flex; gap: 16px;">
-            <button @click="modal = null" class="btn" style="flex: 1; background: #f1f4f8; color: var(--secondary-text);">Cancelar</button>
-            <button @click="saveCliente()" class="btn btn-primary" style="flex: 1;">Salvar</button>
+            <button @click="modal = null" class="btn" style="flex: 1; background: #f1f4f8; color: var(--secondary-text);" :disabled="isSavingCliente">Cancelar</button>
+            <button @click="saveCliente()" class="btn btn-primary" style="flex: 1;" :disabled="isSavingCliente">
+                <span x-show="!isSavingCliente">Salvar</span>
+                <span x-show="isSavingCliente"><i class="fa-solid fa-spinner fa-spin"></i> Salvando...</span>
+            </button>
         </div>
     </div>
     <!-- Modal Excluir Produto (NOVO) -->
-    <div x-show="modal === 'excluir-produto'" class="modal-content" style="max-width: 450px; text-align: center; border-radius: 8px;">
+    <div x-show="modal === 'excluir-produto'" class="modal-content" style="max-width: 450px; text-align: center; border-radius: 8px; padding: 16px;">
         <div style="margin-bottom: 24px;">
             <div style="width: 80px; height: 80px; background: rgba(226, 28, 61, 0.1); color: var(--error); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 2rem;">
                 <i class="fa-solid fa-trash-can"></i>
@@ -306,7 +318,7 @@
     </div>
 
     <!-- Modal Excluir Cliente (NOVO) -->
-    <div x-show="modal === 'excluir-cliente'" class="modal-content" style="max-width: 450px; text-align: center; border-radius: 8px;">
+    <div x-show="modal === 'excluir-cliente'" class="modal-content" style="max-width: 450px; text-align: center; border-radius: 8px; padding: 16px;">
         <div style="margin-bottom: 24px;">
             <div style="width: 80px; height: 80px; background: rgba(226, 28, 61, 0.1); color: var(--error); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 2rem;">
                 <i class="fa-solid fa-user-xmark"></i>
@@ -328,11 +340,38 @@
             <button @click="confirmDeleteCliente()" class="btn btn-error">Excluir Agora</button>
         </div>
     </div>
+
+    <!-- Modal Excluir Orçamento (NOVO) -->
+    <div x-show="modal === 'excluir-orcamento'" class="modal-content" style="max-width: 450px; text-align: center; border-radius: 8px; padding: 16px;">
+        <div style="margin-bottom: 24px;">
+            <div style="width: 80px; height: 80px; background: rgba(226, 28, 61, 0.1); color: var(--error); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 2rem;">
+                <i class="fa-solid fa-file-invoice-dollar"></i>
+            </div>
+            <h2 class="font-outfit" style="font-size: 1.5rem; margin-bottom: 8px;">Excluir Orçamento?</h2>
+            <p style="color: var(--secondary-text); font-size: 0.95rem;">Você está prestes a remover este orçamento definitivamente.</p>
+        </div>
+
+        <div style="background: #f1f4f8; border-radius: 12px; padding: 16px; margin-bottom: 24px; display: flex; align-items: center; text-align: left;">
+            <div style="width: 60px; height: 60px; background: #e5e7eb; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 16px; font-size: 1.5rem; color: #9ca3af;">
+                <i class="fa-solid fa-receipt"></i>
+            </div>
+            <div style="flex: 1; overflow: hidden;">
+                <p style="font-weight: 700; color: var(--primary-text); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;" x-text="'Orçamento #' + (orcamentoToDelete?.numero_sequencial || '')"></p>
+                <p style="font-size: 0.85rem; color: var(--secondary-text);" x-text="getClientName(orcamentoToDelete?.cliente_nome) || ''"></p>
+                <p style="font-size: 0.85rem; color: var(--alternate); font-weight: 700; margin-top: 4px;" x-text="formatMoney(orcamentoToDelete?.valor_total)"></p>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <button @click="modal = null" class="btn" style="background: #e0e3e7; color: var(--primary-text);">Cancelar</button>
+            <button @click="confirmDeleteOrcamento()" class="btn btn-error">Excluir Agora</button>
+        </div>
+    </div>
 </div>
 
 <!-- Modal Novo Orçamento -->
 <div class="modal-overlay" x-show="modal === 'novo-orcamento'" x-transition style="z-index: 10001;" x-cloak>
-    <div class="modal-content" @click.away="modal = null" style="max-width: 850px; border-radius: 12px; padding: 0; border: none; overflow: hidden;">
+    <div class="modal-content" @click.away="modal = null" style="max-width: 850px; border-radius: 12px; padding: 16px; border: none; overflow: hidden;">
         <div style="background-color: #f9fafb; padding: 24px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: flex-start;">
             <div>
                 <h2 style="font-size: 1.5rem; color: #111; margin-bottom: 4px; font-weight: 600;">Cadastrar novo orçamento</h2>
@@ -429,7 +468,7 @@
                 <div style="display: flex; align-items: center; gap: 12px; font-size: 1.1rem; border: 1px solid #dbe2e7; padding: 8px 12px; border-radius: 8px;">
                     <i class="fa-solid fa-minus" style="color: #ef4444; cursor: pointer;" @click="if(novoItemOrcamento.quantidade > 1) novoItemOrcamento.quantidade--"></i>
                     <span style="font-weight: 600; min-width: 20px; text-align: center;" x-text="novoItemOrcamento.quantidade"></span>
-                    <i class="fa-solid fa-plus" style="color: #26b1cb; cursor: pointer;" @click="const p = produtos.find(pr => pr.id_produto === novoItemOrcamento.produto_id); if(p && novoItemOrcamento.quantidade < (parseInt(p.qtd_atual) || 9999)) novoItemOrcamento.quantidade++; else if(!p) novoItemOrcamento.quantidade++"></i>
+                    <i class="fa-solid fa-plus" style="color: #26b1cb; cursor: pointer;" @click="const limit = parseInt(novoItemOrcamento.qtd_prevista); if(isNaN(limit) || novoItemOrcamento.quantidade < limit) novoItemOrcamento.quantidade++;"></i>
                 </div>
             </div>
             
@@ -501,6 +540,31 @@
             </button>
         </div>
     </div>
+    </div>
+</div>
+
+<!-- Modal Atualizar Status Orçamento (Inspirado no mockup 18) -->
+<div x-show="modal === 'atualizar-status-orcamento'" class="modal-overlay" style="z-index: 2500;">
+    <div class="modal-content" @click.stop style="max-width: 400px; border-radius: 8px; padding: 32px; background: white; margin: auto; align-self: center;">
+        <h2 style="font-size: 1.5rem; color: #111; margin-bottom: 24px; font-weight: 500;">Status</h2>
+        
+        <div class="form-group-custom" style="margin-bottom: 32px;">
+            <label style="color: #6b7280; font-size: 0.90rem; margin-bottom: 8px; display: block; text-transform: none; font-weight: 400;">Selecione o status</label>
+            <div style="position: relative;">
+                <select x-model="novoStatusOrcamento" class="form-control" style="background: white; width: 100%; border: 1px solid #e5e7eb; padding: 12px 16px; border-radius: 8px; font-size: 1rem; color: #374151; appearance: none; -webkit-appearance: none;">
+                    <option value="PENDENTE">Pendente</option>
+                    <option value="APROVADO">Aprovado</option>
+                    <option value="CANCELADO">Cancelado</option>
+                </select>
+                <i class="fa-solid fa-chevron-down" style="position: absolute; right: 16px; top: 16px; color: #6b7280; pointer-events: none;"></i>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 16px;">
+            <button @click="modal = null" class="btn" style="flex: 1; background: #f9fafb; color: #4b5563; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px; font-weight: 500; font-size: 1.05rem;">Fechar</button>
+            <button @click="confirmUpdateStatusOrcamento()" class="btn" style="flex: 1; background: #fb5153; color: white; border: none; border-radius: 8px; padding: 14px; font-weight: 500; font-size: 1.05rem; box-shadow: 0 4px 10px rgba(251, 81, 83, 0.3);">Confirmar</button>
+        </div>
+    </div>
 </div>
 
 <style>
@@ -513,7 +577,7 @@
         padding: 30px 0;
     }
     .modal-content { 
-        background: white; padding: 0; width: 95%; max-height: none;
+        background: white; padding: 16px; width: 95%; max-height: none;
         box-shadow: 0 10px 30px rgba(0,0,0,0.15); 
         margin-bottom: 30px;
     }

@@ -36,7 +36,7 @@ if (strpos($uri, 'index.php/') !== false) {
 }
 
 // Proteção da API (Exceto health e login se houvesse no index)
-if ($resource !== 'health' && $resource !== 'login' && !isset($_SESSION['user'])) {
+if ($resource !== 'health' && $resource !== 'login' && $resource !== 'catalogo_publico' && !isset($_SESSION['user'])) {
     http_response_code(401);
     echo json_encode(["message" => "Não autorizado"]);
     exit();
@@ -48,6 +48,25 @@ session_write_close();
 switch($resource) {
     case 'health':
         echo json_encode(["status" => "ok", "message" => "Akipede Mais API is running"]);
+        break;
+
+    case 'catalogo_publico':
+        require_once __DIR__ . '/controllers/LojaController.php';
+        require_once __DIR__ . '/controllers/ProdutoController.php';
+        $lojaCtrl = new LojaController((new Database())->getConnection());
+        $prodCtrl = new ProdutoController((new Database())->getConnection());
+        $url_slug = $_GET['url'] ?? null;
+        if ($url_slug) {
+            $loja = $lojaCtrl->getByUrl($url_slug);
+            if ($loja) {
+                $produtos = $prodCtrl->read($loja['id_loja']);
+                echo json_encode(['loja' => $loja, 'produtos' => $produtos]);
+            } else {
+                http_response_code(404); echo json_encode(['message' => 'Loja não encontrada']);
+            }
+        } else {
+            http_response_code(400); echo json_encode(['message' => 'URL não informada']);
+        }
         break;
     case 'produtos':
         require_once __DIR__ . '/controllers/ProdutoController.php';
@@ -114,6 +133,45 @@ switch($resource) {
                 http_response_code(201); echo json_encode(["message" => "Orçamento criado", "id" => $id]);
             } else {
                 http_response_code(500); echo json_encode(["message" => "Erro ao criar orçamento"]);
+            }
+        } elseif ($request_method == 'PUT') {
+            $id = $_GET['id'] ?? null;
+            $data = json_decode(file_get_contents("php://input"), true);
+            if ($id && isset($data['itens'])) {
+                $upRes = $controller->update($id, $data);
+                if ($upRes === true) {
+                    echo json_encode(["message" => "Orçamento atualizado"]);
+                } else {
+                    http_response_code(500); echo json_encode(["message" => "Erro DB: " . $upRes]);
+                }
+            } elseif ($id && isset($data['status'])) {
+                if ($controller->updateStatus($id, $data['status'])) {
+                    echo json_encode(["message" => "Status atualizado"]);
+                } else {
+                    http_response_code(500); echo json_encode(["message" => "Erro ao atualizar status"]);
+                }
+            } else {
+                http_response_code(400); echo json_encode(["message" => "Dados inválidos"]);
+            }
+        } elseif ($request_method == 'DELETE') {
+            $id = $_GET['id'] ?? null;
+            if ($id && $controller->delete($id)) {
+                echo json_encode(["message" => "Orçamento excluído"]);
+            } else {
+                http_response_code(500); echo json_encode(["message" => "Erro ao excluir"]);
+            }
+        }
+        break;
+
+    case 'orcamentos_itens':
+        require_once __DIR__ . '/controllers/OrcamentoController.php';
+        $controller = new OrcamentoController((new Database())->getConnection());
+        if ($request_method == 'GET') {
+            $orcamento_id = $_GET['orcamento_id'] ?? null;
+            if ($orcamento_id) {
+                echo json_encode($controller->getItens($orcamento_id));
+            } else {
+                echo json_encode([]);
             }
         }
         break;

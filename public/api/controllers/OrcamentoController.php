@@ -48,8 +48,8 @@ class OrcamentoController {
             unset($data['itens']);
 
             $query = "INSERT INTO " . $this->table_name . " 
-                      (parceiro, cliente_nome, cliente_cpf_cnpj, cliente_fone, loja, status, validade, valor_total, observacoes, desconto, mes, ano, data_orcamento, data_inicio, data_fim) 
-                      VALUES (:parceiro, :cliente_nome, :cliente_cpf_cnpj, :cliente_fone, :loja, :status, :validade, :valor_total, :observacoes, :desconto, :mes, :ano, :data_orcamento, :data_inicio, :data_fim)
+                      (numero_sequencial, parceiro, cliente_nome, cliente_cpf_cnpj, cliente_fone, loja, status, validade, valor_total, observacoes, desconto, mes, ano, data_orcamento, data_inicio, data_fim) 
+                      VALUES (:numero_sequencial, :parceiro, :cliente_nome, :cliente_cpf_cnpj, :cliente_fone, :loja, :status, :validade, :valor_total, :observacoes, :desconto, :mes, :ano, :data_orcamento, :data_inicio, :data_fim)
                       RETURNING id_orcamento";
             
             $stmt = $this->db->prepare($query);
@@ -98,7 +98,7 @@ class OrcamentoController {
             $query = "SELECT SUM(quantidade) as total_reservado 
                       FROM orcamento_item 
                       WHERE produto::text = :produto_id 
-                      AND status != 'Cancelado'
+                      AND status = 'APROVADO'
                       AND (data_inicio <= :fim_24 AND data_fim >= :inicio)";
             
             $stmt = $this->db->prepare($query);
@@ -121,6 +121,72 @@ class OrcamentoController {
             return $totalReservado - $qtdAtual;
         } catch (Exception $e) {
             return 0;
+        }
+    }
+
+    public function getItens($orcamento_id) {
+        $query = "SELECT oi.*, p.nome as nome_produto FROM orcamento_item oi JOIN produto p ON oi.produto = p.id_produto WHERE oi.orcamento = :id";
+        $stmt = $this->db->prepare($query);
+        $stmt->bindParam(':id', $orcamento_id);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function updateStatus($id, $status) {
+        $query = "UPDATE " . $this->table_name . " SET status = :status WHERE id_orcamento = :id";
+        $stmt = $this->db->prepare($query);
+        $stmt->bindParam(':status', $status);
+        $stmt->bindParam(':id', $id);
+        return $stmt->execute();
+    }
+
+    public function delete($id) {
+        $this->db->prepare("DELETE FROM orcamento_item WHERE orcamento = :id")->execute([':id' => $id]);
+        $stmt = $this->db->prepare("DELETE FROM " . $this->table_name . " WHERE id_orcamento = :id");
+        $stmt->bindParam(':id', $id);
+        return $stmt->execute();
+    }
+
+    public function update($id, $data) {
+        try {
+            $itens = $data['itens'] ?? [];
+            
+            $query = "UPDATE " . $this->table_name . " 
+                      SET cliente_nome = :cliente_nome, validade = :validade, valor_total = :valor_total, observacoes = :observacoes, desconto = :desconto, data_inicio = :data_inicio, data_fim = :data_fim 
+                      WHERE id_orcamento = :id";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([
+                ':cliente_nome' => $data['cliente_nome'],
+                ':validade' => !empty($data['validade']) ? $data['validade'] : null,
+                ':valor_total' => $data['valor_total'],
+                ':observacoes' => $data['observacoes'],
+                ':desconto' => $data['desconto'] ?? 0,
+                ':data_inicio' => !empty($data['data_inicio']) ? $data['data_inicio'] : null,
+                ':data_fim' => !empty($data['data_fim']) ? $data['data_fim'] : null,
+                ':id' => $id
+            ]);
+
+            // Delete and re-insert items
+            $this->db->prepare("DELETE FROM orcamento_item WHERE orcamento = :id")->execute([':id' => $id]);
+
+            foreach ($itens as $item) {
+                $queryItem = "INSERT INTO orcamento_item 
+                              (orcamento, produto, quantidade, valor_unitario, valor_total, data_inicio, data_fim) 
+                              VALUES (:orcamento, :produto, :quantidade, :valor_unitario, :valor_total, :data_inicio, :data_fim)";
+                $stmtItem = $this->db->prepare($queryItem);
+                $stmtItem->execute([
+                    ':orcamento' => $id,
+                    ':produto' => $item['produto_id'],
+                    ':quantidade' => $item['quantidade'],
+                    ':valor_unitario' => $item['valor_unitario'],
+                    ':valor_total' => $item['quantidade'] * $item['valor_unitario'],
+                    ':data_inicio' => !empty($data['data_inicio']) ? $data['data_inicio'] : null,
+                    ':data_fim' => !empty($data['data_fim']) ? $data['data_fim'] : null
+                ]);
+            }
+            return true;
+        } catch (Exception $e) {
+            return $e->getMessage();
         }
     }
 }

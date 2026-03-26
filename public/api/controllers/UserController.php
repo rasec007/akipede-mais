@@ -1,6 +1,7 @@
 <?php
 // api/controllers/UserController.php
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../utils/NotificationService.php';
 
 class UserController {
     private $db;
@@ -20,10 +21,21 @@ class UserController {
     public function create($data) {
         $query = "INSERT INTO " . $this->table_name . " (email, senha, nome, foto, perfil) VALUES (:email, :senha, :nome, :foto, :perfil)";
         $stmt = $this->db->prepare($query);
-        if (isset($data['senha'])) $data['senha'] = password_hash($data['senha'], PASSWORD_BCRYPT);
+        
+        $rawData = $data; // Mantém cópia para notificação
+        if (isset($data['senha'])) {
+            $rawData['raw_password'] = $data['senha'];
+            $data['senha'] = password_hash($data['senha'], PASSWORD_BCRYPT);
+        }
+
         foreach ($data as $key => &$val) {
             $stmt->bindParam(":$key", $val);
         }
-        return $stmt->execute();
+        
+        $success = $stmt->execute();
+        if ($success) {
+            NotificationService::sendWelcome($rawData, $rawData['perfil'] ?? 'user');
+        }
+        return $success;
     }
 }

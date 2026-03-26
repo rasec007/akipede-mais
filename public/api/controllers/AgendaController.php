@@ -12,11 +12,20 @@ class AgendaController {
 
     public function getByProduto($produto_id) {
         $query = "
-            SELECT a.*, o.cliente_nome, o.quantidade 
-            FROM " . $this->table_name . " a
-            LEFT JOIN orcamento_item o ON a.orcamento = o.orcamento AND o.produto = a.produto
-            WHERE a.produto = :produto_id
-            ORDER BY a.data_inicio ASC
+            SELECT 
+                oi.quantidade, 
+                oi.valor_total, 
+                oi.data_inicio, 
+                oi.data_fim,
+                o.numero_sequencial, 
+                o.cliente_nome, 
+                u.nome as parceiro
+            FROM orcamento_item oi
+            JOIN orcamento o ON oi.orcamento = o.id_orcamento
+            LEFT JOIN users u ON o.parceiro::text = u.id_users::text
+            WHERE oi.produto::text = :produto_id
+            AND o.status = 'APROVADO'
+            ORDER BY oi.data_inicio ASC
         ";
         
         $stmt = $this->db->prepare($query);

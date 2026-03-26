@@ -1,6 +1,7 @@
 <?php
 // api/controllers/ClienteController.php
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../utils/NotificationService.php';
 
 class ClienteController {
     private $db;
@@ -57,7 +58,11 @@ class ClienteController {
             $stmt->bindValue(':estado', $data['estado'] ?? null);
             $stmt->bindValue(':cep', $data['cep'] ?? null);
 
-            return $stmt->execute();
+            $success = $stmt->execute();
+            if ($success) {
+                NotificationService::sendWelcome($data, 'cliente');
+            }
+            return $success;
         } catch (PDOException $e) {
             $this->lastError = $e->getMessage();
             return false;

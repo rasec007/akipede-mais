@@ -31,15 +31,25 @@ function app() {
         formProduct: { nome: '', valor_venda: '', valor_promocional: '', cod_produto: '', valor_custo: '', id_categoria: '', ativo: true, descricao: '', foto: '' },
         formCategory: { id_categoria: null, nome: '', icone: '', ativo: true },
         formAgendamento: { ativo: false, tempo: 0, pId: null, nome: '', currentYear: new Date().getFullYear(), currentMonth: new Date().getMonth(), days: [], agendamentosGerais: [], selectedDay: null, selectedDayAgendamentos: [] },
-        formCliente: { id_cliente: null, nome: '', apelido: '', email: '', fone: '', cpf: '', obs: '', logradouro: '', num: '', complemento: '', bairro: '', cidade: '', estado: '', cep: '', perfil: 'Usuário', foto: '', senha: '' },
+        formCliente: { id_cliente: null, nome: '', apelido: '', email: '', fone: '', cpf: '', obs: '', logradouro: '', num: '', complemento: '', bairro: '', cidade: '', estado: '', cep: '', perfil: 'Cliente', foto: '', senha: '' },
         formOrcamento: { numero_sequencial: '', cliente_id: '', dt_criado: new Date().toISOString().split('T')[0], validade_dias: 30, dt_inicio: '', dt_fim: '', observacoes: '', subtotal: 0, descontos: 0, valor_total: 0 },
         novoItemOrcamento: { produto_id: '', quantidade: 1, valor_unitario: 0, total: 0, qtd_prevista: '-' },
         orcamentoItens: [],
         productToDelete: null,
         clienteToDelete: null,
         orcamentoToDelete: null,
+        orcamentoStatusApprove: null,
+        novoStatusOrcamento: 'PENDENTE',
         categorias: [],
-        
+        formLoja: {
+            id_loja: '', nome: '', cnpj: '', whatsapp: '', cor_tema: '#37c6da',
+            descricao: '', instagram: '', facebook: '',
+            cep: '', endereco: '', numero: '', complemento: '', bairro: '', cidade: '', estado: '',
+            logo: '', url: ''
+        },
+        isSavingLoja: false,
+        isSavingCliente: false,
+
         init() {
             console.log('Akipede Mais Premium (Fidelity Pass) inicializado');
             this.loadUserData();
@@ -61,8 +71,7 @@ function app() {
                         const place = autocomplete.getPlace();
                         if (place && place.formatted_address) {
                             this.formCliente.logradouro = place.formatted_address;
-                            inputEl.value = place.formatted_address;
-                            inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+                            inputEl.blur(); // Força o fechamento do dropdown do Google Maps
                             for (const component of place.address_components) {
                                 const type = component.types[0];
                                 if (type === 'administrative_area_level_2') this.formCliente.cidade = component.long_name;
@@ -79,6 +88,32 @@ function app() {
             tentarIniciar();
         },
 
+        mountGooglePlacesLoja(inputEl) {
+            const tentarIniciar = () => {
+                if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
+                    setTimeout(tentarIniciar, 500); return;
+                }
+                try {
+                    const autocomplete = new google.maps.places.Autocomplete(inputEl, { types: ['address'], componentRestrictions: { country: 'br' } });
+                    autocomplete.addListener('place_changed', () => {
+                        const place = autocomplete.getPlace();
+                        if (place && place.formatted_address) {
+                            this.formLoja.endereco = place.formatted_address;
+                            inputEl.blur();
+                            for (const component of place.address_components) {
+                                const type = component.types[0];
+                                if (type === 'administrative_area_level_2') this.formLoja.cidade = component.long_name;
+                                if (type === 'administrative_area_level_1') this.formLoja.estado = component.short_name;
+                                if (type === 'sublocality_level_1' || type === 'sublocality') this.formLoja.bairro = component.long_name;
+                                if (type === 'postal_code') this.formLoja.cep = component.long_name;
+                            }
+                        }
+                    });
+                } catch (e) { console.error("Erro Google Maps Loja:", e); }
+            };
+            tentarIniciar();
+        },
+
         loadUserData() {
             // Obter dados do usuário injetados pelo PHP no window se necessário, 
             // ou buscar via API que lê a sessão
@@ -88,10 +123,40 @@ function app() {
                     if (data.logged) {
                         this.user = data.user;
                         this.loadInitialData(); // Carrega dados após saber quem é o usuário
+                        this.loadLoja();
                     } else {
                         window.location.href = 'login.php';
                     }
                 });
+        },
+
+        loadLoja() {
+            if (!this.user || !this.user.id) return;
+            fetch('api/index.php/loja?user_id=' + this.user.id)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.id_loja) {
+                        this.formLoja = { ...this.formLoja, ...data };
+                        if (!this.formLoja.cor_tema) this.formLoja.cor_tema = '#37c6da';
+                    }
+                })
+                .catch(err => console.error("Erro ao carregar loja", err));
+        },
+
+        saveLoja() {
+            if (!this.formLoja.id_loja) return;
+            this.isSavingLoja = true;
+            fetch('api/index.php/loja?id=' + this.formLoja.id_loja, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(this.formLoja)
+            })
+            .then(res => res.json())
+            .then(data => {
+                this.showToast('Informações da loja atualizadas com sucesso!', 'success');
+            })
+            .catch(err => this.showToast('Erro ao atualizar a loja', 'error'))
+            .finally(() => this.isSavingLoja = false);
         },
 
         getPageTitle() {
@@ -269,7 +334,9 @@ function app() {
             if (!this.formOrcamento.dt_criado || !this.formOrcamento.validade_dias) return;
             const date = new Date(this.formOrcamento.dt_criado + 'T12:00:00'); // Evitar timezone shift
             date.setDate(date.getDate() + parseInt(this.formOrcamento.validade_dias));
-            this.formOrcamento.validade = date.toISOString().split('T')[0];
+            const iso = date.toISOString().split('T')[0];
+            this.formOrcamento.validade = iso;
+            this.formOrcamento.dt_validade = iso;
         },
 
         editProduct(p) { 
@@ -495,6 +562,19 @@ function app() {
         },
 
         saveCliente() {
+            const u = this.formCliente;
+            if (!u.nome || !u.cpf || !u.email || !u.fone || !u.perfil || (this.modal === 'novo-cliente' && !u.senha)) {
+                this.showToast('Por favor, preencha todos os campos obrigatórios (Nome, CPF, E-mail, Celular, Senha e Perfil).', 'error');
+                return;
+            }
+
+            if (this.formCliente.senha && this.formCliente.senha !== this.formCliente.senha_confirma) {
+                this.showToast('As senhas não coincidem!', 'error');
+                return;
+            }
+
+            this.isSavingCliente = true;
+
             const method = this.modal === 'editar-cliente' ? 'PUT' : 'POST';
             const endpoint = 'api/index.php/clientes' + (method === 'PUT' ? '?id=' + this.formCliente.id_cliente : '');
             
@@ -520,15 +600,18 @@ function app() {
             .then(res => res.json())
             .then(data => {
                 if (data.error) {
-                    this.showToast('Erro ao salvar cliente: ' + data.error, 'error');
+                    this.showToast('Erro ao salvar usuário: ' + data.error, 'error');
                 } else {
-                    const msg = method === 'POST' ? `Cliente "${this.formCliente.nome}" cadastrado com sucesso!` : `Cliente "${this.formCliente.nome}" atualizado com sucesso!`;
-                    this.showToast(msg);
+                    const msg = method === 'POST' ? 'Tudo realizado com sucesso! Dados gravados e mensagens enviadas.' : `Usuário "${this.formCliente.nome}" atualizado com sucesso!`;
+                    this.showToast(msg, 'success');
                     this.modal = null;
                     this.loadClientes();
                 }
             })
-            .catch(err => this.showToast('Erro ao salvar cliente', 'error'));
+            .catch(err => this.showToast('Erro ao salvar usuário', 'error'))
+            .finally(() => {
+                this.isSavingCliente = false;
+            });
         },
 
         deleteCliente(c) {
@@ -577,15 +660,77 @@ function app() {
         },
 
         deleteOrcamento(o) {
-            if (!confirm(`Deseja realmente excluir o orçamento #${o.numero_sequencial}?`)) return;
-            // Endpoint fictício pois orçamentos são sensíveis, mas seguindo o padrão
+            this.orcamentoToDelete = o;
+            this.modal = 'excluir-orcamento';
+        },
+
+        confirmDeleteOrcamento() {
+            const o = this.orcamentoToDelete;
+            if (!o) return;
             fetch('api/index.php/orcamentos?id=' + o.id_orcamento, { method: 'DELETE' })
                 .then(res => res.json())
                 .then(data => {
-                    this.showToast(`Orçamento #${o.numero_sequencial} excluído com sucesso!`);
-                    this.loadInitialData();
+                    this.showToast(`Orçamento #${o.numero_sequencial || o.id_orcamento} excluído com sucesso!`);
+                    this.modal = null;
+                    this.orcamentoToDelete = null;
+                    this.loadOrcamentos();
                 })
-                .catch(err => this.showToast(`Erro ao excluir orçamento #${o.numero_sequencial}`, 'error'));
+                .catch(err => this.showToast(`Erro ao excluir orçamento #${o.numero_sequencial || o.id_orcamento}`, 'error'));
+        },
+
+        approveOrcamento(o) {
+            this.orcamentoStatusApprove = o;
+            this.novoStatusOrcamento = o.status || 'PENDENTE';
+            this.modal = 'atualizar-status-orcamento';
+        },
+
+        confirmUpdateStatusOrcamento() {
+            if (!this.orcamentoStatusApprove) return;
+            fetch(`api/index.php/orcamentos?id=${this.orcamentoStatusApprove.id_orcamento}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: this.novoStatusOrcamento })
+            })
+            .then(res => res.json())
+            .then(data => {
+                this.showToast(`Status do orçamento #${this.orcamentoStatusApprove.numero_sequencial || this.orcamentoStatusApprove.id_orcamento} atualizado para ${this.novoStatusOrcamento}!`, 'success');
+                this.modal = null;
+                this.loadOrcamentos();
+            })
+            .catch(err => this.showToast(`Erro ao atualizar status`, 'error'));
+        },
+
+        editOrcamento(o) {
+            this.formOrcamento = {
+                id_orcamento: o.id_orcamento,
+                numero_sequencial: o.numero_sequencial,
+                cliente_id: o.cliente_id,
+                parceiro_id: o.parceiro,
+                parceiro_nome: o.parceiro_nome,
+                dt_criado: o.dt_criado ? o.dt_criado.split(' ')[0] : '',
+                validade_dias: 30, // Defaul, will calculate date
+                dt_inicio: o.data_inicio ? o.data_inicio.slice(0, 16) : '',
+                dt_fim: o.data_fim ? o.data_fim.slice(0, 16) : '',
+                observacoes: o.observacoes || '',
+                subtotal: o.valor_total || 0,
+                descontos: o.desconto || 0,
+                valor_total: o.valor_total || 0
+            };
+            this.calculateValidade();
+            
+            fetch(`api/index.php/orcamentos_itens?orcamento_id=${o.id_orcamento}`)
+            .then(res => res.json())
+            .then(data => {
+                this.orcamentoItens = data.map(i => ({
+                    produto_id: i.produto,
+                    nome_produto: i.nome_produto || 'Produto ' + i.produto,
+                    quantidade: i.quantidade,
+                    valor_unitario: i.valor_unitario,
+                    total: i.valor_total,
+                    qtd_prevista: '-'
+                }));
+                this.modal = 'novo-orcamento';
+            });
         },
 
         async uploadFile(event, type, formTarget) {
@@ -703,11 +848,7 @@ function app() {
             const p = this.produtos.find(prod => prod.id_produto == this.novoItemOrcamento.produto_id);
             if (p) {
                 this.novoItemOrcamento.valor_unitario = parseFloat(p.valor_venda) || 0;
-                // Travar quantidade no máximo do estoque
-                const estoqueArr = parseInt(p.qtd_atual);
-                if (!isNaN(estoqueArr) && this.novoItemOrcamento.quantidade > estoqueArr) {
-                    this.novoItemOrcamento.quantidade = estoqueArr > 0 ? estoqueArr : 1;
-                }
+                // O limite agora é baseado na QTD PREVISTA (asynchronous)
                 this.fetchDisponibilidade();
             } else {
                 this.novoItemOrcamento.valor_unitario = 0;
@@ -732,8 +873,8 @@ function app() {
                 const data = await res.json();
                 
                 if (data.status === 'success') {
-                    // Garante que o valor seja convertido para string para exibição correta
-                    this.novoItemOrcamento.qtd_prevista = data.qtd_prevista.toString();
+                    // Garante que o valor seja convertido para string para exibição correta e sempre positivo conforme solicitado
+                    this.novoItemOrcamento.qtd_prevista = Math.abs(data.qtd_prevista).toString();
                 } else {
                     this.novoItemOrcamento.qtd_prevista = '0';
                 }
@@ -741,13 +882,6 @@ function app() {
                 console.error('Erro ao buscar disponibilidade:', err);
                 this.novoItemOrcamento.qtd_prevista = 'Erro';
             }
-        },
-
-        calculateValidade() {
-            if (!this.formOrcamento.dt_criado || !this.formOrcamento.validade_dias) return;
-            const date = new Date(this.formOrcamento.dt_criado + 'T00:00:00');
-            date.setDate(date.getDate() + parseInt(this.formOrcamento.validade_dias));
-            this.formOrcamento.dt_validade = date.toISOString().split('T')[0];
         },
 
         applyDiscountMask(value) {
@@ -765,13 +899,24 @@ function app() {
             }
             const p = this.produtos.find(prod => prod.id_produto == this.novoItemOrcamento.produto_id);
             if (!p) return;
+
+            const limit = parseInt(this.novoItemOrcamento.qtd_prevista);
+            if (!isNaN(limit) && this.novoItemOrcamento.quantidade > limit) {
+                alert('Quantidade excede a disponibilidade prevista (' + limit + ').');
+                return;
+            }
             
-            this.orcamentoItens.push({
-                produto_id: p.id_produto,
-                nome_produto: p.nome,
-                quantidade: this.novoItemOrcamento.quantidade,
-                valor_unitario: this.novoItemOrcamento.valor_unitario
-            });
+            const existingItem = this.orcamentoItens.find(item => item.produto_id == p.id_produto);
+            if (existingItem) {
+                existingItem.quantidade += this.novoItemOrcamento.quantidade;
+            } else {
+                this.orcamentoItens.push({
+                    produto_id: p.id_produto,
+                    nome_produto: p.nome,
+                    quantidade: this.novoItemOrcamento.quantidade,
+                    valor_unitario: this.novoItemOrcamento.valor_unitario
+                });
+            }
             
             this.novoItemOrcamento = { produto_id: '', quantidade: 1, valor_unitario: 0, total: 0, qtd_prevista: '-' };
             this.calculateOrcamentoTotal();
@@ -800,12 +945,13 @@ function app() {
             
             const selectedClient = this.clientes.find(c => c.id_cliente === this.formOrcamento.cliente_id);
             const payload = {
+                numero_sequencial: parseInt(this.formOrcamento.numero_sequencial),
                 parceiro: this.formOrcamento.parceiro_id,
                 cliente_nome: this.formOrcamento.cliente_id,
                 cliente_cpf_cnpj: selectedClient ? selectedClient.cpf_cnpj : '',
                 cliente_fone: selectedClient ? selectedClient.fone : '',
                 loja: this.user.loja_id,
-                status: 'Pendentes',
+                status: 'PENDENTE',
                 validade: this.formOrcamento.dt_validade,
                 valor_total: this.formOrcamento.valor_total,
                 observacoes: this.formOrcamento.observacoes,
@@ -822,17 +968,24 @@ function app() {
                 }))
             };
             
+            const isEditing = !!this.formOrcamento.id_orcamento;
+            const method = isEditing ? 'PUT' : 'POST';
+            const endpoint = isEditing ? `api/index.php/orcamentos?id=${this.formOrcamento.id_orcamento}` : 'api/index.php/orcamentos';
+            
             try {
-                const res = await fetch('api/index.php/orcamentos', {
-                    method: 'POST',
+                const res = await fetch(endpoint, {
+                    method: method,
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(payload)
                 });
                 const data = await res.json();
-                if (data.id) {
-                    this.showToast('Orçamento criado com sucesso!');
+                if (data.id || data.message === "Orçamento atualizado") {
+                    this.showToast(isEditing ? 'Orçamento atualizado com sucesso!' : 'Orçamento criado com sucesso!');
                     this.modal = null;
-                    this.loadInitialData();
+                    await this.loadInitialData(); // Agora usando await
+                    // Forçar atualização do array orcamentos para garantir UI
+                    const resO = await fetch('api/index.php/orcamentos');
+                    this.orcamentos = await resO.json();
                     this.orcamentoItens = [];
                     this.formOrcamento = { numero_sequencial: '', cliente_id: '', dt_criado: new Date().toISOString().split('T')[0], validade_dias: 30, dt_inicio: '', dt_fim: '', observacoes: '', subtotal: 0, descontos: 0, valor_total: 0 };
                 } else {
@@ -847,6 +1000,16 @@ function app() {
         formatDate(dateStr) {
             if (!dateStr) return null;
             return new Date(dateStr).toLocaleDateString('pt-BR');
+        },
+
+        getClientName(idOrName) {
+            if (!idOrName) return '-';
+            // Se parecer com um UUID (tem hifens ou mais de 30 chars), tenta buscar
+            if (idOrName.length > 30 || idOrName.includes('-')) {
+                const c = this.clientes.find(cli => cli.id_cliente === idOrName);
+                if (c) return c.nome;
+            }
+            return idOrName;
         },
 
         logout() {
